@@ -6,14 +6,15 @@ AddCSLuaFile( "nml/mechs/lostplanet/gtb22/gtb22.lua" )
 
 ----------------------------------------------------------------------------------
 
-ENT.Base      = "base_anim"
-ENT.Type      = "anim"
-ENT.PrintName = "GTB-22"
-ENT.Author	  = "shadowscion"
-ENT.Category  = "Need More Legs"
+ENT.Base 		= "base_anim"
+ENT.Type 		= "anim"
+ENT.PrintName 	= "GTB-22"
+ENT.Author 		= "shadowscion"
+ENT.Category 	= "NeedMoreLegs"
 
-ENT.Spawnable	   = true
-ENT.AdminSpawnable = true
+ENT.Spawnable 		= true
+ENT.AdminSpawnable 	= true
+ ENT.Editable       = true
 
 ----------------------------------------------------------------------------------
 
@@ -42,6 +43,8 @@ if SERVER then
 
 		local phys = self:GetPhysicsObject()
 		if IsValid( phys ) then
+			phys:EnableDrag( false )
+			phys:EnableGravity( false )
 			phys:EnableMotion( false )
 		    phys:Wake()
 		end
@@ -56,13 +59,20 @@ if not CLIENT then return end
 
 ----------------------------------------------------------------------------------
 
+ENT.Soul = {}
+
 function ENT:Initialize()
 	if not IsValid( self ) then return end
 
 	include( "nml/mechs/lostplanet/gtb22/gtb22.lua" )
 
-	NML.Soul.Summon( self, 1, true, 0 )
+	self.Soul = NML.Soul
+	self.Soul.Summon( self, 1, true, 0 )
 	NML.Soul = nil
+end
+
+function ENT:SetMechSkin( skin )
+	self.Soul.SetSkin( skin )
 end
 
 function ENT:Draw()

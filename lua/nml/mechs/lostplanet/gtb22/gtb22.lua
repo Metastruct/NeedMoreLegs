@@ -154,9 +154,20 @@ end
 ----------------------------------------------------------------------------------
 
 function Soul.CreateGaits( self )
+    if not Soul.Entity then return end
+
     Soul.Entity.gaits = {}
     Soul.Entity.gaits["RF"] = Gait.New( "RF", self, Vector( -10, -25, 0 ), 0 )
     Soul.Entity.gaits["LF"] = Gait.New( "LF", self, Vector( -10, 25, 0 ), 0.5 )
+end
+
+function Soul.SetSkin( skin )
+    if not Soul.Entity then return end
+    if not Soul.Entity.form then return end
+
+    for _, part in pairs( Soul.Entity.form ) do
+        part:SetSkin( skin or self.property_skin or 0 )
+    end
 end
 
 ----------------------------------------------------------------------------------
@@ -201,8 +212,8 @@ function Soul.Think()
 
     -- Gait System & Inverse Kinematics
     local vel = Soul.Entity:GetVelocity()
-    gaits["RF"]:Think( 200, vel:Length() / 2, vel / 5 )
-    gaits["LF"]:Think( 200, vel:Length() / 2, vel / 5 )
+    gaits["RF"]:Think( 200, vel:Length() / 5, vel / 5 )
+    gaits["LF"]:Think( 200, vel:Length() / 5, vel / 5 )
 
     anim( Soul.Entity, gaits["RF"].stepPos, holos[5],  holos[6],  holos[7],  holos[8],  holos[9],  29.998, 26.526, 48.312, Soul.Entity.property_scale )
     anim( Soul.Entity, gaits["LF"].stepPos, holos[11], holos[12], holos[13], holos[14], holos[15], 29.998, 26.526, 48.312, Soul.Entity.property_scale )

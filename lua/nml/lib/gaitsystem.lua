@@ -207,15 +207,12 @@ function Gait:DoWalkCycle( gaitSize, stepVel )
 end
 
 function Gait:Think( rate, velMul, stepVel )
-	self.walkVel = lerp( self.walkVel, velMul, 0.1 )
-	self.walkCycle = self.walkCycle + ( 0.05 + 0.03 * self.walkVel / rate ) * 0.25
+	--self.walkVel = lerp( self.walkVel, velMul, 0.1 )
+	self.walkVel = lerp( self.walkVel, velMul, 0.1 * FrameTime() )
+	self.walkCycle = self.walkCycle + ( ( 0.05 + 0.03 * self.walkVel / rate ) * 30 ) * FrameTime()
 
 	local gaitSize = math.Clamp( 0.4 + 0.03 * self.walkVel / 100, 0, 0.9 )
 	self:DoWalkCycle( gaitSize - math.floor( gaitSize ), stepVel )
 end
 
 ----------------------------------------------------------------------------------
-
---self.walkCycle = self.walkCycle + ( 0.05 + 0.03 * self.walkVel / rate ) * ( FrameTime() * 66.66667 )
---self.walkCycle = self.walkCycle + ( 0.05 + FrameTime() * self.walkVel / rate ) * 0.25
---local gaitSize = math.Clamp( 0.4 + FrameTime() * self.walkVel / 100, 0, 0.9 )
