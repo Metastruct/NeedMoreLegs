@@ -5,7 +5,7 @@ NML = NML or {}
 
 local NML = NML
 local Holo = NML.Hologram
-local Gait = NML.GaitSystem
+local Helper = NML.Helper
 
 ----------------------------------------------------------------------------------
 
@@ -89,97 +89,57 @@ local schematic = {
 
 ----------------------------------------------------------------------------------
 
-NML.Soul = {}
-local Soul = NML.Soul
+local Mech = NML_AddMechType( "GTB22" )
 
-----------------------------------------------------------------------------------
+Mech:AddSkin( "Lost Planet - White", 0 )
+Mech:AddSkin( "Lost Planet - Red" , 1 )
+Mech:AddSkin( "Combine Mech" , 2 )
 
--- Builds the model from the schematic
-function Soul.Summon( self, scale, shading, skin )
-    if not IsValid( self ) then return end
-    if self:GetClass() ~= "sent_nml_gtb22" then return end
+Mech:SetInit( function( self )
+	self.Holograms = {}
+	self.Holoentity = Holo.CreateEntity()
 
-    Soul.Entity = self
+	for i, info in ipairs( schematic ) do
+		local part = Holo.CreateHologram( self.Holoentity )
+		local partParent = self.Holograms[info.parent] and self.Holograms[info.parent] or self.Entity
 
-    if self.carcass then self.carcass:Remove() end
-
-    self.form = {} -- a table holding all of the hologram parts
-    self.carcass = Holo.CreateEntity() -- a csent to draw from
-
-    self.property_scale = scale or self.property_scale or 1
-    self.property_shading = shading or self.property_shading or false
-    self.property_skin = skin or self.property_skin or nil
-
-    for i, info in ipairs( schematic ) do
-        local part = Holo.CreateHologram( self.carcass )
-        local partParent = self.form[info.parent] and self.form[info.parent] or self
-
-        part:SetParent( partParent )
-        part:SetPos( partParent:LocalToWorld( info.position * self.property_scale ) )
-        part:SetAngles( partParent:LocalToWorldAngles( info.angle or Angle() ) )
+		part:SetParent( partParent )
+		part:SetPos( partParent:LocalToWorld( info.position ) )
+		part:SetAngles( partParent:LocalToWorldAngles( info.angle or Angle() ) )
         part:SetModel( info.model )
         part:SetMaterial( info.material or nil )
-        part:SetScale( Vector( self.property_scale, self.property_scale, self.property_scale ) )
-        part:SetDisableShading( self.property_shading )
-        part:SetSkin( self.property_skin )
+        part:SetSkin( self.skin or 0 )
 
-        self.form[i] = part
-    end
+        self.Holograms[i] = part
+	end
 
-    self.carcass.draw = true
+	self.Holoentity.draw = true
 
-    timer.Simple( 0.25, function() Soul.Convene( self ) end )
-end
+	self.Entity:CallOnRemove( "GarbageDay", function( ent )
+		self:StopThink()
+		self.Holoentity:Remove()
+		self.Holograms = nil
 
--- Activates the mech
-function Soul.Convene( self )
-    Soul.CreateGaits( self )
+		timer.Simple( 0, function()
+			if not IsValid( ent ) then return end
+			self:Initialize()
+		end )
+	end )
 
-    self:CallOnRemove( "GarbageDay", function( ent )
-        ent.carcass:Remove()
-        ent.form  = nil
-        ent.gaits = nil
-
-        hook.Remove( "Think", "nml_thinkhook_id_" .. ent:EntIndex() )
-
-        timer.Simple( 0, function()
-            if not IsValid( ent ) then return end
-            Soul.Summon( ent )
-        end )
-    end )
-
-    hook.Add( "Think", "nml_thinkhook_id_" .. self:EntIndex(), Soul.Think or function() end )
-end
+	self:AddGait( "Right", Vector( -10, -25, 0 ), 0 )
+	self:AddGait( "Left", Vector( -10, 25, 0 ), 0.5 )
+end )
 
 ----------------------------------------------------------------------------------
 
-function Soul.CreateGaits( self )
-    if not Soul.Entity then return end
-
-    Soul.Entity.gaits = {}
-    Soul.Entity.gaits["RF"] = Gait.New( "RF", self, Vector( -10, -25, 0 ), 0 )
-    Soul.Entity.gaits["LF"] = Gait.New( "LF", self, Vector( -10, 25, 0 ), 0.5 )
-end
-
-function Soul.SetSkin( skin )
-    if not Soul.Entity then return end
-    if not Soul.Entity.form then return end
-
-    for _, part in pairs( Soul.Entity.form ) do
-        part:SetSkin( skin or self.property_skin or 0 )
-    end
-end
-
-----------------------------------------------------------------------------------
-
-local sin = Gait.Sin
-local cos = Gait.Cos
-local acos = Gait.Acos
-local asin = Gait.Asin
-local atan = Gait.Atan
-local sign = Gait.Sign
-local bearing = Gait.Bearing
-local toLocalAxis = Gait.ToLocalAxis
+local sin = Helper.Sin
+local cos = Helper.Cos
+local acos = Helper.Acos
+local asin = Helper.Asin
+local atan = Helper.Atan
+local sign = Helper.Sign
+local bearing = Helper.Bearing
+local toLocalAxis = Helper.ToLocalAxis
 
 local function anim( ent, pos, hip, fem, tib, tars, foot, length0, length1, length2, factor )
     length0 = length0 * factor
@@ -202,21 +162,13 @@ local function anim( ent, pos, hip, fem, tib, tars, foot, length0, length1, leng
     foot:SetAngles( Angle( 0, ent:GetAngles().y, 0 ) )
 end
 
-function Soul.Think()
-    if not IsValid( Soul.Entity ) then return end
+Mech:SetThink( function( self )
+    local vel = self.Entity:GetVelocity()
 
-    local holos = Soul.Entity.form
-    local gaits = Soul.Entity.gaits
+    self:RunAllGaits( 200, vel:Length() / 5, vel /5 )
 
-    if not holos or not gaits then return end
-
-    -- Gait System & Inverse Kinematics
-    local vel = Soul.Entity:GetVelocity()
-    gaits["RF"]:Think( 200, vel:Length() / 5, vel / 5 )
-    gaits["LF"]:Think( 200, vel:Length() / 5, vel / 5 )
-
-    anim( Soul.Entity, gaits["RF"].stepPos, holos[5],  holos[6],  holos[7],  holos[8],  holos[9],  29.998, 26.526, 48.312, Soul.Entity.property_scale )
-    anim( Soul.Entity, gaits["LF"].stepPos, holos[11], holos[12], holos[13], holos[14], holos[15], 29.998, 26.526, 48.312, Soul.Entity.property_scale )
-end
+    anim( self.Entity, self.Gaits["Right"].StepCurve, self.Holograms[5], self.Holograms[6],  self.Holograms[7],  self.Holograms[8],  self.Holograms[9],  29.998, 26.526, 48.312, 1 )
+    anim( self.Entity, self.Gaits["Left"].StepCurve, self.Holograms[11], self.Holograms[12], self.Holograms[13], self.Holograms[14], self.Holograms[15], 29.998, 26.526, 48.312, 1 )
+end )
 
 ----------------------------------------------------------------------------------

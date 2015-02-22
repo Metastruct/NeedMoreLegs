@@ -2,7 +2,6 @@
 ----------------------------------------------------------------------------------
 
 AddCSLuaFile()
-AddCSLuaFile( "nml/mechs/lostplanet/gtb22/gtb22.lua" )
 
 ----------------------------------------------------------------------------------
 
@@ -59,20 +58,13 @@ if not CLIENT then return end
 
 ----------------------------------------------------------------------------------
 
-ENT.Soul = {}
-
 function ENT:Initialize()
 	if not IsValid( self ) then return end
 
-	include( "nml/mechs/lostplanet/gtb22/gtb22.lua" )
+	local Mech = NML_GetMechType( "GTB22" )
 
-	self.Soul = NML.Soul
-	self.Soul.Summon( self, 1, true, 0 )
-	NML.Soul = nil
-end
-
-function ENT:SetMechSkin( skin )
-	self.Soul.SetSkin( skin )
+	Mech:SetEntity( self )
+	Mech:Initialize()
 end
 
 function ENT:Draw()
