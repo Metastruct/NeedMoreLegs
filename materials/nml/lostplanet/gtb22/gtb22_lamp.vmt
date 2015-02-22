@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$model" 	   "1"
+	"$baseTexture" "nml/lostplanet/gtb22/gtb22_lamp"
+	"$halflambert" "1"
+}

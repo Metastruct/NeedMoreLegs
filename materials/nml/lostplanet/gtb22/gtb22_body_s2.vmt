@@ -1,0 +1,12 @@
+"VertexLitGeneric"
+{
+	"$model"		 "1"
+	"$baseTexture" 	 "nml/lostplanet/gtb22/gtb22_body_s2_d"
+	"$bumpmap"  	 "nml/lostplanet/gtb22/gtb22_body_n"
+	"$halflambert"   "1"
+
+	"$phong" 		 		"1"
+	"$phongexponent" 		"54.8"
+	"$phongboost"	 		"0.5"
+	"$phongfresnelranges"	"[0.1 1 1]"
+}
