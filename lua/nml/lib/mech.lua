@@ -101,6 +101,7 @@ end
 function Mech:AddGait( name, offset, order )
 	self.Gaits = self.Gaits or {}
 	self.Gaits[name] = NML_CreateNewGait( self.Entity, offset, order )
+	return self.Gaits[name]
 end
 
 function Mech:RunAllGaits( rate, velMul, addVel )
@@ -116,6 +117,11 @@ end
 
 function Mech:GetGaitPos( name )
 	return self:GetGait( name ).StepCurve or Vector()
+end
+
+function Mech:GetGaitHeightDiff( gaitA, gaitB )
+	if not self.Gaits or not self.Gaits[gaitA] or not self.Gaits[gaitB] then return 0 end
+	return ( ( self.Gaits[gaitA].StepCurve - self.Gaits[gaitA].StepPointC ) - ( self.Gaits[gaitB].StepCurve - self.Gaits[gaitB].StepPointC ) ).z
 end
 
 ----------------------------------------------------------------------------------
@@ -150,6 +156,8 @@ function NML_CreateNewGait( entity, offset, order )
 	self.StepPointC = initv
 	self.StepCurve  = initv
 
+	self.GroundHeight = 0
+
 	self.StepStart = order - math.floor( order )
 	self.StepState = 0
 
@@ -172,10 +180,10 @@ function Gait:DoWalkAnimation( active, interp, addVel )
 			local traceD   = traceB.Hit and traceB or traceC
 			local distance = self.StepPointC:Distance( traceD.HitPos )
 
-			if distance > 15 then
+			if distance > 15 + self.GroundHeight then
 				self.StepPointA = self.StepPointC
-				self.StepPointC = traceD.HitPos
-				self.StepPointB = ( self.StepPointA + self.StepPointC ) / 2 + traceD.HitNormal * math.Clamp( distance / 2, 10, 50 )
+				self.StepPointC = traceD.HitPos + traceD.HitNormal * self.GroundHeight
+				self.StepPointB = ( self.StepPointA + self.StepPointC ) / 2 + traceD.HitNormal * ( math.Clamp( distance / 2, 10, 50 ) + self.GroundHeight )
 				self.StepState  = 1
 			else
 				self.StepState = -1
@@ -185,12 +193,12 @@ function Gait:DoWalkAnimation( active, interp, addVel )
 			local traceB = rangerOffset( traceA, traceA + addVel, self.Entity )
 			local traceC = rangerOffset( 500, traceB.HitPos, -self.Entity:GetUp(), self.Entity )
 
-			self.StepPointC = traceB.Hit and traceB.HitPos + traceB.HitNormal * 15 or traceC.HitPos + traceC.HitNormal * 15
+			self.StepPointC = traceB.Hit and traceB.HitPos + traceB.HitNormal * self.GroundHeight or traceC.HitPos + traceC.HitNormal * self.GroundHeight
 			self.StepCurve  = bezier( self.StepPointA, self.StepPointB, self.StepPointC, interp )
 		end
 	elseif self.StepState ~= 0 then
 		self.StepState = 0
-		self.StepCurve  = self.StepPointC
+		self.StepCurve = self.StepPointC
 	end
 end
 
@@ -234,3 +242,11 @@ function Gait:Think( rate, velMul, addVel )
 end
 
 ----------------------------------------------------------------------------------
+
+function Gait:SetOrder()
+	self.StepStart = order - math.floor( order )
+end
+
+function Gait:SetGroundHeight( groundHeight )
+	self.GroundHeight = groundHeight
+end

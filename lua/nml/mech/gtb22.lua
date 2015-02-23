@@ -109,6 +109,7 @@ Mech:SetInit( function( self )
         part:SetModel( info.model )
         part:SetMaterial( info.material or nil )
         part:SetSkin( self.skin or 0 )
+        part:SetDrawBones( true )
 
         self.Holograms[i] = part
 	end
@@ -126,8 +127,9 @@ Mech:SetInit( function( self )
 		end )
 	end )
 
-	self:AddGait( "Right", Vector( -10, -25, 0 ), 0 )
-	self:AddGait( "Left", Vector( -10, 25, 0 ), 0.5 )
+	self:AddGait( "Right", Vector( -10, -25, 0 ), 0 ):SetGroundHeight( 15 )
+	self:AddGait( "Left", Vector( -10, 25, 0 ), 0.5 ):SetGroundHeight( 15 )
+    self.HeightDiff = 0
 end )
 
 ----------------------------------------------------------------------------------
@@ -141,17 +143,25 @@ local sign = Helper.Sign
 local bearing = Helper.Bearing
 local toLocalAxis = Helper.ToLocalAxis
 
+local angle = FindMetaTable( "Angle" )
+function angle:SetRoll( roll )
+    return Angle( self.p, self.y, roll )
+end
+
+function angle:SetPitch( pitch )
+    return Angle( pitch, self.y, self.r )
+end
+
 local function anim( ent, pos, hip, fem, tib, tars, foot, length0, length1, length2, factor )
     length0 = length0 * factor
     length1 = length1 * factor
     length2 = length2 * factor
 
     local laxis = toLocalAxis( ent, pos - fem:GetPos() )
-    local laxisAngle = laxis:Angle()
-        laxisAngle.r = -bearing( fem:GetPos(), ent:GetAngles(), pos )
+    local laxisAngle = laxis:Angle():SetRoll( -bearing( fem:GetPos(), ent:GetAngles(), pos ) )
         laxisAngle:RotateAroundAxis( laxisAngle:Right(), 90 + 90 * ( 1 - math.min( 1, laxis:Length() / ( length0 + length2 ) - 0.5 ) ) )
 
-    hip:SetAngles( ent:LocalToWorldAngles( Angle( 0, 0, math.Clamp( laxisAngle.r, -30, 30 ) ) ) )
+    hip:SetAngles( ent:LocalToWorldAngles( Angle( 0, 0, math.Clamp( laxisAngle.r, -25, 25 ) ) ) )
     fem:SetAngles( ent:LocalToWorldAngles( laxisAngle ) )
 
     local laxis = toLocalAxis( fem, pos - tib:GetPos() )
@@ -165,7 +175,17 @@ end
 Mech:SetThink( function( self )
     local vel = self.Entity:GetVelocity()
 
-    self:RunAllGaits( 200, vel:Length() / 5, vel /5 )
+    self:RunAllGaits( 500, vel:Length() / 2, vel / 5 )
+
+    self.HeightDiff = Lerp( 30 * FrameTime(), self.HeightDiff, math.Clamp( self:GetGaitHeightDiff( "Right", "Left" ), -50, 50 ) )
+    self.Holograms[1]:SetPos( self.Entity:LocalToWorld( Vector( 0, 0, math.abs( self.HeightDiff / 3 ) ) ) )
+    self.Holograms[1]:SetAngles( self.Entity:LocalToWorldAngles( Angle( 0, 0, -self.HeightDiff / 3 ) ) )
+
+    self.Holograms[2]:SetAngles( self.Holograms[1]:GetAngles():SetRoll(0) )
+    self.Holograms[3]:SetAngles( self.Holograms[2]:GetAngles():SetPitch( math.abs( self.HeightDiff / 3 ) ) )
+
+    self.Holograms[4]:SetAngles( self.Holograms[1]:GetAngles():SetRoll( -math.abs( self.HeightDiff / 4 ) ) )
+    self.Holograms[10]:SetAngles( self.Holograms[1]:GetAngles():SetRoll( math.abs( self.HeightDiff / 4 ) ) )
 
     anim( self.Entity, self.Gaits["Right"].StepCurve, self.Holograms[5], self.Holograms[6],  self.Holograms[7],  self.Holograms[8],  self.Holograms[9],  29.998, 26.526, 48.312, 1 )
     anim( self.Entity, self.Gaits["Left"].StepCurve, self.Holograms[11], self.Holograms[12], self.Holograms[13], self.Holograms[14], self.Holograms[15], 29.998, 26.526, 48.312, 1 )

@@ -191,6 +191,19 @@ function Holo:UpdateNoDraw()
 	 self.flags.nodraw = ( self:GetPos() - EyePos() ):Dot( EyeVector() ) < 0.5
 end
 
+local boneMaterial = Material( "widgets/bone_small.png", "unlitsmooth" )
+local boneColor = Color( 225, 225, 255, 225 )
+
+function Holo:DrawBones()
+	if not self.flags.showbones then return end
+	if not self.parent then return end
+
+	cam.IgnoreZ( true )
+		render.SetMaterial( boneMaterial )
+		render.DrawBeam( self.pos, self.parent:GetPos(), self.pos:Distance( self.parent:GetPos() ) * 0.2, 0, 1, boneColor )
+	cam.IgnoreZ( false )
+end
+
 function Holo:Draw()
 	if not IsValid( self ) then return end
 
@@ -218,6 +231,8 @@ function Holo:Draw()
 	render.SuppressEngineLighting( false )
 	render.SetColorModulation( 1, 1, 1 )
 	render.SetBlend( 1 )
+
+	self:DrawBones()
 end
 
 ----------------------------------------------------------------------------------
@@ -269,6 +284,10 @@ end
 
 function Holo:SetDisableShading( shading )
 	self.flags.shading = shading or false
+end
+
+function Holo:SetDrawBones( drawBones )
+	self.flags.showbones = drawBones or false
 end
 
 function Holo:SetSkin( skin )

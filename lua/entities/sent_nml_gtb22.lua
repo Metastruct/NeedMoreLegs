@@ -13,7 +13,6 @@ ENT.Category 	= "NeedMoreLegs"
 
 ENT.Spawnable 		= true
 ENT.AdminSpawnable 	= true
- ENT.Editable       = true
 
 ----------------------------------------------------------------------------------
 
@@ -68,7 +67,7 @@ function ENT:Initialize()
 end
 
 function ENT:Draw()
-	self:DrawModel()
+	-- self:DrawModel()
 end
 
 ----------------------------------------------------------------------------------
