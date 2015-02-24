@@ -19,15 +19,15 @@ include( "nml/shared/lib_helper.lua" )
 ----------------------------------------------------------------------------------
 
 if CLIENT then
-	include( "nml/client/lib_holo.lua" )
-	include( "nml/client/lib_gait.lua" )
+    include( "nml/client/lib_holo.lua" )
+    include( "nml/client/lib_gait.lua" )
 end
 
 for _, path in pairs( file.Find( "nml/shared/types/*.lua", "LUA" ) ) do
-	local path = "nml/shared/types/" .. path
+    local path = "nml/shared/types/" .. path
 
-	AddCSLuaFile( path )
-	include( path )
+    AddCSLuaFile( path )
+    include( path )
 end
 
 ----------------------------------------------------------------------------------

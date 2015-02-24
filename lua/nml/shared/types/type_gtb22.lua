@@ -12,18 +12,18 @@ Mech:AddSkin( 2, "Combine Mech" )
 
 if SERVER then
 
-	Mech:SetInit( function( self )
+    Mech:SetInit( function( self )
 
-	end )
+    end )
 
-	Mech:SetThink( function( self )
-		local phys = self.Entity:GetPhysicsObject()
-		if IsValid( phys ) then
-			phys:ApplyForceCenter( ( self.Entity:GetForward() * 100 - phys:GetVelocity() / 5 ) * phys:GetMass() )
-		end
-	end )
+    Mech:SetThink( function( self )
+        local phys = self.Entity:GetPhysicsObject()
+        if IsValid( phys ) then
+            phys:ApplyForceCenter( ( self.Entity:GetForward() * 100 - phys:GetVelocity() / 5 ) * phys:GetMass() )
+        end
+    end )
 
-	return
+    return
 
 end
 
@@ -114,10 +114,10 @@ local schematic = {
 }
 
 Mech:SetInit( function( self )
-	self.Holograms = {}
-	self.Holoentity = Holo.CreateEntity()
+    self.Holograms = {}
+    self.Holoentity = Holo.CreateEntity()
 
-	for i, info in ipairs( schematic ) do
+    for i, info in ipairs( schematic ) do
         local part = Holo.CreateHologram( self.Holoentity )
         local partParent = self.Holograms[info.parent] and self.Holograms[info.parent] or self.Entity
 
@@ -128,21 +128,21 @@ Mech:SetInit( function( self )
         part:SetMaterial( info.material or nil )
 
         self.Holograms[i] = part
-	end
+    end
 
-	self.Holoentity.draw = true
+    self.Holoentity.draw = true
 
-	self.Entity:CallOnRemove( "GarbageDay", function( ent )
-		self.Holoentity:Remove()
-		self.Holograms = nil
+    self.Entity:CallOnRemove( "GarbageDay", function( ent )
+        self.Holoentity:Remove()
+        self.Holograms = nil
 
-		timer.Simple( 0, function()
-			if not IsValid( ent ) then return end
-			self:Initialize()
-		end )
-	end )
+        timer.Simple( 0, function()
+            if not IsValid( ent ) then return end
+            self:Initialize()
+        end )
+    end )
 
-	self:AddGait( "Right", Vector( -10, -25, 0 ), 0, 15 )
+    self:AddGait( "Right", Vector( -10, -25, 0 ), 0, 15 )
     self:AddGait( "Left", Vector( -10, 25, 0 ), 0.5, 15 )
     self.HeightDiff = 0
 end )
