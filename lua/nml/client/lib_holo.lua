@@ -1,7 +1,5 @@
-
 ----------------------------------------------------------------------------------
---- Clientside Hologram Class
---- by shadowscion
+--- Clientside Hologram Class - by shadowscion
 ----------------------------------------------------------------------------------
 
 collectgarbage( "collect" )
@@ -19,9 +17,6 @@ local string = string
 local render = render
 local assert = assert
 local setmetatable = setmetatable
-
-local Holo = {}
-Holo.__index = Holo
 
 ----------------------------------------------------------------------------------
 
@@ -64,12 +59,15 @@ end )
 
 ----------------------------------------------------------------------------------
 
+local meta = {}
+meta.__index = meta
+
 function Hologram.CreateHologram( entity )
 	assert( IsValid( entity ) and type( entity ) == "CSEnt", "ERROR: Holograms must be attached to a CSEnt!" )
 
 	local self = {}
 
-	setmetatable( self, Holo )
+	setmetatable( self, meta )
 
 	self:Init( entity )
 
@@ -90,7 +88,7 @@ end
 
 ----------------------------------------------------------------------------------
 
-function Holo:Init( entity )
+function meta:Init( entity )
 	-- data
 	self.entity  = entity or self.entity
 	self.parent  = nil
@@ -122,15 +120,15 @@ function Holo:Init( entity )
 	bake( self.entity, self )
 end
 
-function Holo:Reset()
+function meta:Reset()
 	self:Init()
 end
 
-function Holo:Remove() -- DOESN'T WORK!!!!!!!!
+function meta:Remove() -- DOESN'T WORK!!!!!!!!
 	self = nil
 end
 
-function Holo:IsValid()
+function meta:IsValid()
 	if not self or not IsValid( self.entity ) then
 		self:Remove()
 		return false
@@ -138,13 +136,13 @@ function Holo:IsValid()
 	return true
 end
 
-function Holo:__tostring()
+function meta:__tostring()
 	return string.format( "[%s][%s][%s]", self.creator and self.creator:GetName() or "NULL_CREATOR", self.entity:EntIndex(), self.model )
 end
 
 ----------------------------------------------------------------------------------
 
-function Holo:UpdatePos()
+function meta:UpdatePos()
 	if self.flags.updatepos then
 		if IsValid( self.parent ) then self.lpos = self.parent:WorldToLocal( self.pos ) else self.parent = nil end
 
@@ -159,7 +157,7 @@ function Holo:UpdatePos()
 	self.entity:SetRenderOrigin( self.pos )
 end
 
-function Holo:UpdateAngles()
+function meta:UpdateAngles()
 	if self.flags.updateang then
 		if IsValid( self.parent ) then self.lang = self.parent:WorldToLocalAngles( self.ang ) else self.parent = nil end
 
@@ -174,7 +172,7 @@ function Holo:UpdateAngles()
 	self.entity:SetRenderAngles( self.ang )
 end
 
-function Holo:UpdateScale()
+function meta:UpdateScale()
 	if self.entity.EnableMatrix then
 		local matrix = Matrix()
 		matrix:Scale( self.scale )
@@ -187,14 +185,14 @@ function Holo:UpdateScale()
 	self.entity:SetupBones()
 end
 
-function Holo:UpdateNoDraw()
+function meta:UpdateNoDraw()
 	 self.flags.nodraw = ( self:GetPos() - EyePos() ):Dot( EyeVector() ) < 0.5
 end
 
 local boneMaterial = Material( "widgets/bone_small.png", "unlitsmooth" )
 local boneColor = Color( 225, 225, 255, 225 )
 
-function Holo:DrawBones()
+function meta:DrawBones()
 	if not self.flags.showbones then return end
 	if not self.parent then return end
 
@@ -204,7 +202,7 @@ function Holo:DrawBones()
 	cam.IgnoreZ( false )
 end
 
-function Holo:Draw()
+function meta:Draw()
 	if not IsValid( self ) then return end
 
 	if self.flags.nodraw then
@@ -237,7 +235,7 @@ end
 
 ----------------------------------------------------------------------------------
 
-function Holo:SetParent( parent )
+function meta:SetParent( parent )
 	if not IsValid( parent ) then return end
 
 	self.parent = parent
@@ -245,127 +243,127 @@ function Holo:SetParent( parent )
 	self.flags.updateang = true
 end
 
-function Holo:SetPos( vec )
+function meta:SetPos( vec )
 	self.pos = vec
 	self.flags.updatepos = true
 end
 
-function Holo:SetAngles( ang )
+function meta:SetAngles( ang )
 	--self.ang = LerpAngle( FrameTime(), self.ang, ang )
 	self.ang = ang
 	self.flags.updateang = true
 end
 
-function Holo:SetScale( vec )
+function meta:SetScale( vec )
 	self.scale = vec
 	self.scalar = ( vec.x + vec.y + vec.z ) / 3
 end
 
-function Holo:SetModel( model )
+function meta:SetModel( model )
 	-- if not util.IsValidModel( model ) then self.model = "models / error.mdl" return end
 	if not file.Exists( model, "GAME" ) then self.model = "models/error.mdl" return end
 	self.model = model
 end
 
-function Holo:SetMaterial( material )
+function meta:SetMaterial( material )
 	if not file.Exists( string.format( "materials/%s.vmt", material ), "GAME" ) then self.material = nil return end
 	self.material = material
 end
 
-function Holo:SetColor( color )
+function meta:SetColor( color )
 	if not color then self.color = Color( 1, 1, 1, 1 ) return end
 	self.color = Color( color.r / 255, color.g / 255, color.b / 255, color.a / 255 )
 end
 
-function Holo:SetAlpha( alpha )
+function meta:SetAlpha( alpha )
 	if not alpha then self.color.a = 1 return end
 	self.color.a = alpha / 255
 end
 
-function Holo:SetDisableShading( shading )
+function meta:SetDisableShading( shading )
 	self.flags.shading = shading or false
 end
 
-function Holo:SetDrawBones( drawBones )
+function meta:SetDrawBones( drawBones )
 	self.flags.showbones = drawBones or false
 end
 
-function Holo:SetSkin( skin )
+function meta:SetSkin( skin )
 	self.skin = skin or nil
 end
 
-function Holo:SetNoDraw( nodraw )
+function meta:SetNoDraw( nodraw )
 	self.flags.nodraw = nodraw or false
 end
 
 ----------------------------------------------------------------------------------
 
-function Holo:GetEntity()
+function meta:GetEntity()
 	return self.entity
 end
 
-function Holo:GetParent()
+function meta:GetParent()
 	return self.parent
 end
 
-function Holo:GetPos()
+function meta:GetPos()
 	return self.pos
 end
 
-function Holo:GetAngles()
+function meta:GetAngles()
 	return self.ang
 end
 
-function Holo:GetScale()
+function meta:GetScale()
 	return self.scale, self.scalar
 end
 
-function Holo:GetModel()
+function meta:GetModel()
 	return self.model
 end
 
-function Holo:GetMaterial()
+function meta:GetMaterial()
 	return self.material
 end
 
-function Holo:GetColor()
+function meta:GetColor()
 	return Color( self.color.r * 255, self.color.g * 255, self.color.b * 255, self.color.a * 255 )
 end
 
-function Holo:GetAlpha()
+function meta:GetAlpha()
 	return self.color.a * 255
 end
 
 ----------------------------------------------------------------------------------
 
-function Holo:GetUp()
+function meta:GetUp()
 	return self:GetAngles():Up()
 end
 
-function Holo:GetForward()
+function meta:GetForward()
 	return self:GetAngles():Forward()
 end
 
-function Holo:GetRight()
+function meta:GetRight()
 	return self:GetAngles():Right()
 end
 
-function Holo:WorldToLocal( wvector )
+function meta:WorldToLocal( wvector )
 	local lvec, _ = WorldToLocal( wvector, Angle(), self:GetPos(), self:GetAngles() )
 	return lvec
 end
 
-function Holo:LocalToWorld( lvector )
+function meta:LocalToWorld( lvector )
 	local wvec, _ = LocalToWorld( lvector, Angle(), self:GetPos(), self:GetAngles() )
 	return wvec
 end
 
-function Holo:WorldToLocalAngles( wangle )
+function meta:WorldToLocalAngles( wangle )
 	local _, lang = WorldToLocal( Vector(), wangle, self:GetPos(), self:GetAngles() )
 	return lang
 end
 
-function Holo:LocalToWorldAngles( langle )
+function meta:LocalToWorldAngles( langle )
 	local _, wang = LocalToWorld( Vector(), langle, self:GetPos(), self:GetAngles() )
 	return wang
 end

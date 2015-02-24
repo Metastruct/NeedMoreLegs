@@ -1,13 +1,39 @@
+----------------------------------------------------------------------------------
+
+local Mech = NML_CreateMechType( "gtb22" )
+
+Mech:SetAuthor( "shadowscion" )
+
+Mech:AddSkin( 0, "Lost Planet - White" )
+Mech:AddSkin( 1, "Lost Planet - Red" )
+Mech:AddSkin( 2, "Combine Mech" )
 
 ----------------------------------------------------------------------------------
 
-NML = NML or {}
+if SERVER then
+
+	Mech:SetInit( function( self )
+
+	end )
+
+	Mech:SetThink( function( self )
+		local phys = self.Entity:GetPhysicsObject()
+		if IsValid( phys ) then
+			phys:ApplyForceCenter( ( self.Entity:GetForward() * 100 - phys:GetVelocity() / 5 ) * phys:GetMass() )
+		end
+	end )
+
+	return
+
+end
+
+----------------------------------------------------------------------------------
+
+if not CLIENT then return end
 
 local NML = NML
 local Holo = NML.Hologram
 local Helper = NML.Helper
-
-----------------------------------------------------------------------------------
 
 local schematic = {
     {
@@ -87,29 +113,19 @@ local schematic = {
     };
 }
 
-----------------------------------------------------------------------------------
-
-local Mech = NML_AddMechType( "GTB22" )
-
-Mech:AddSkin( "Lost Planet - White", 0 )
-Mech:AddSkin( "Lost Planet - Red" , 1 )
-Mech:AddSkin( "Combine Mech" , 2 )
-
 Mech:SetInit( function( self )
 	self.Holograms = {}
 	self.Holoentity = Holo.CreateEntity()
 
 	for i, info in ipairs( schematic ) do
-		local part = Holo.CreateHologram( self.Holoentity )
-		local partParent = self.Holograms[info.parent] and self.Holograms[info.parent] or self.Entity
+        local part = Holo.CreateHologram( self.Holoentity )
+        local partParent = self.Holograms[info.parent] and self.Holograms[info.parent] or self.Entity
 
-		part:SetParent( partParent )
-		part:SetPos( partParent:LocalToWorld( info.position ) )
-		part:SetAngles( partParent:LocalToWorldAngles( info.angle or Angle() ) )
+        part:SetParent( partParent )
+        part:SetPos( partParent:LocalToWorld( info.position ) )
+        part:SetAngles( partParent:LocalToWorldAngles( info.angle or Angle() ) )
         part:SetModel( info.model )
         part:SetMaterial( info.material or nil )
-        part:SetSkin( self.skin or 0 )
-        part:SetDrawBones( true )
 
         self.Holograms[i] = part
 	end
@@ -117,7 +133,6 @@ Mech:SetInit( function( self )
 	self.Holoentity.draw = true
 
 	self.Entity:CallOnRemove( "GarbageDay", function( ent )
-		self:StopThink()
 		self.Holoentity:Remove()
 		self.Holograms = nil
 
@@ -127,8 +142,8 @@ Mech:SetInit( function( self )
 		end )
 	end )
 
-	self:AddGait( "Right", Vector( -10, -25, 0 ), 0 ):SetGroundHeight( 15 )
-	self:AddGait( "Left", Vector( -10, 25, 0 ), 0.5 ):SetGroundHeight( 15 )
+	self:AddGait( "Right", Vector( -10, -25, 0 ), 0, 15 )
+    self:AddGait( "Left", Vector( -10, 25, 0 ), 0.5, 15 )
     self.HeightDiff = 0
 end )
 
@@ -140,10 +155,12 @@ local acos = Helper.Acos
 local asin = Helper.Asin
 local atan = Helper.Atan
 local sign = Helper.Sign
+local lerp = Helper.Lerp
 local bearing = Helper.Bearing
 local toLocalAxis = Helper.ToLocalAxis
 
 local angle = FindMetaTable( "Angle" )
+
 function angle:SetRoll( roll )
     return Angle( self.p, self.y, roll )
 end
@@ -165,7 +182,7 @@ local function anim( ent, pos, hip, fem, tib, tars, foot, length0, length1, leng
     fem:SetAngles( ent:LocalToWorldAngles( laxisAngle ) )
 
     local laxis = toLocalAxis( fem, pos - tib:GetPos() )
-    local dist = math.min( laxis:Length(), length1 + length2 - 0.001 )
+    local dist = math.min( laxis:Length(), length1 + length2 - 1 )
 
     tib:SetAngles( fem:LocalToWorldAngles( Angle( atan( -laxis.z, laxis.x ) + acos( ( dist ^ 2 + length1 ^ 2 - length2 ^ 2 ) / ( 2 * length1 * dist ) ) - 90, 0, 0 ) ) )
     tars:SetAngles( tib:LocalToWorldAngles( Angle( acos( ( length2 ^ 2 + length1 ^ 2 - dist ^ 2 ) / ( 2 * length1 * length2 ) ) + 180, 0, 0 ) ) )
@@ -175,13 +192,13 @@ end
 Mech:SetThink( function( self )
     local vel = self.Entity:GetVelocity()
 
-    self:RunAllGaits( 500, vel:Length() / 2, vel / 5 )
+    self:RunAllGaits( vel:Length() / 1000, vel / 7.5 )
 
-    self.HeightDiff = Lerp( 30 * FrameTime(), self.HeightDiff, math.Clamp( self:GetGaitHeightDiff( "Right", "Left" ), -50, 50 ) )
+    self.HeightDiff = lerp( self.HeightDiff, math.Clamp( self:GetGaitDiff( "Right", "Left" ), -50, 50 ), 30 * FrameTime() )
     self.Holograms[1]:SetPos( self.Entity:LocalToWorld( Vector( 0, 0, math.abs( self.HeightDiff / 3 ) ) ) )
     self.Holograms[1]:SetAngles( self.Entity:LocalToWorldAngles( Angle( 0, 0, -self.HeightDiff / 3 ) ) )
 
-    self.Holograms[2]:SetAngles( self.Holograms[1]:GetAngles():SetRoll(0) )
+    self.Holograms[2]:SetAngles( self.Holograms[1]:GetAngles():SetRoll( 0 ) )
     self.Holograms[3]:SetAngles( self.Holograms[2]:GetAngles():SetPitch( math.abs( self.HeightDiff / 3 ) ) )
 
     self.Holograms[4]:SetAngles( self.Holograms[1]:GetAngles():SetRoll( -math.abs( self.HeightDiff / 4 ) ) )

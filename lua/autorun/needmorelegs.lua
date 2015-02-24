@@ -1,23 +1,33 @@
+----------------------------------------------------------------------------------
+
+NML = NML or {}
+
+----------------------------------------------------------------------------------
 
 AddCSLuaFile()
 
-local function Reload()
-	if CLIENT then NML = NML or {} end
+AddCSLuaFile( "nml/shared/properties.lua" )
+AddCSLuaFile( "nml/shared/lib_mech.lua" )
+AddCSLuaFile( "nml/shared/lib_helper.lua" )
+AddCSLuaFile( "nml/client/lib_holo.lua" )
+AddCSLuaFile( "nml/client/lib_gait.lua" )
 
-	local folders = {
-		"nml/lib/",
-		"nml/mech/",
-	}
+include( "nml/shared/properties.lua" )
+include( "nml/shared/lib_mech.lua" )
+include( "nml/shared/lib_helper.lua" )
 
-	for _, dir in pairs( folders ) do
-		for _, path in pairs( file.Find( dir .. "*.lua", "LUA" ) ) do
-			AddCSLuaFile( dir .. path )
-			if CLIENT then
-				include( dir .. path )
-				MsgC( Color( 155, 175, 175 ), "NML: Loaded " , Color( 175, 195, 195 ), "\"" .. dir .. path .. "\"\n" )
-			end
-		end
-	end
+----------------------------------------------------------------------------------
+
+if CLIENT then
+	include( "nml/client/lib_holo.lua" )
+	include( "nml/client/lib_gait.lua" )
 end
 
-Reload()
+for _, path in pairs( file.Find( "nml/shared/types/*.lua", "LUA" ) ) do
+	local path = "nml/shared/types/" .. path
+
+	AddCSLuaFile( path )
+	include( path )
+end
+
+----------------------------------------------------------------------------------

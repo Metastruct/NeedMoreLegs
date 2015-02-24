@@ -1,4 +1,3 @@
-
 ----------------------------------------------------------------------------------
 
 AddCSLuaFile()
@@ -7,7 +6,7 @@ AddCSLuaFile()
 
 ENT.Base 		= "base_anim"
 ENT.Type 		= "anim"
-ENT.PrintName 	= "GTB-22"
+ENT.PrintName 	= "base_nml"
 ENT.Author 		= "shadowscion"
 ENT.Category 	= "NeedMoreLegs"
 
@@ -19,7 +18,7 @@ ENT.AdminSpawnable 	= true
 function ENT:SpawnFunction( ply, trace )
  	if not trace.Hit then return end
 
-	local sent = ents.Create( "sent_nml_gtb22" )
+	local sent = ents.Create( "base_nml" )
 
 	sent:SetPos( trace.HitPos + Vector( 0, 0, 125 ) )
 	sent:SetAngles( Angle( 0, 0, 0 ) )
@@ -31,8 +30,8 @@ end
 
 ----------------------------------------------------------------------------------
 
-if SERVER then
-	function ENT:Initialize()
+function ENT:Initialize()
+	if SERVER then
 		self:SetModel( "models/hunter/blocks/cube025x025x025.mdl" )
 
 		self:PhysicsInit( SOLID_VPHYSICS )
@@ -48,8 +47,14 @@ if SERVER then
 		end
 	end
 
-	return
+	self.NML = NML_GetMechType( "gtb22" ) or nil
+	if self.NML then
+		self.NML:SetEntity( self )
+		self.NML:Initialize()
+	end
 end
+
+ENT.Think = nil
 
 ----------------------------------------------------------------------------------
 
@@ -57,17 +62,8 @@ if not CLIENT then return end
 
 ----------------------------------------------------------------------------------
 
-function ENT:Initialize()
-	if not IsValid( self ) then return end
-
-	local Mech = NML_GetMechType( "GTB22" )
-
-	Mech:SetEntity( self )
-	Mech:Initialize()
-end
-
 function ENT:Draw()
-	-- self:DrawModel()
+	self:DrawModel()
 end
 
 ----------------------------------------------------------------------------------
