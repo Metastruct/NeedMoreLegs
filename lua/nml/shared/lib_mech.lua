@@ -86,15 +86,36 @@ end
 
 function meta:SetDisableShading( status )
     self.DisableShading = status or false
+
+    if SERVER then return end
+
+    if not self.Holograms then return end
+    for _, part in pairs( self.Holograms ) do
+        part:SetDisableShading( self.DisableShading )
+    end
 end
 
 function meta:SetDisplayBones( status )
     self.DisplayBones = status or false
+
+    if SERVER then return end
+
+    if not self.Holograms then return end
+    for _, part in pairs( self.Holograms ) do
+        part:SetDisplayBones( self.DisplayBones )
+    end
 end
 
 function meta:SetSkin( skinID )
     if not self.Skins[skinID] then return end
     self.Skin = skinID
+
+    if SERVER then return end
+
+    if not self.Holograms then return end
+    for _, part in pairs( self.Holograms ) do
+        part:SetSkin( self.Skin )
+    end
 end
 
 ----------------------------------------------------------------------------------

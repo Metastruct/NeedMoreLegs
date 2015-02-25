@@ -98,6 +98,20 @@ local function rangerOffset( ... )
 end
 Helper.RangerOffset = rangerOffset
 
+local function podEyeTrace( ply )
+    if not ply:InVehicle() then return {} end
+
+    local pos = ply:GetShootPos()
+    local dir = ply:GetVehicle():WorldToLocal( ply:GetAimVector() + ply:GetVehicle():GetPos() )
+
+    return util.TraceLine( {
+        start  = pos,
+        endpos = pos + dir * 32768,
+        mask   = MASK_SOLID_BRUSHONLY,
+    } )
+end
+Helper.PodEyeTrace = podEyeTrace
+
 ----------------------------------------------------------------------------------
 
 local function notHuge( value )

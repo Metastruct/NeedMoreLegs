@@ -19,9 +19,18 @@ if SERVER then
     local ezAngForce   = Helper.EZAngForce
     local getAngVel    = Helper.AngVel
     local rangerOffset = Helper.RangerOffset
+    local podEyeTrace  = Helper.PodEyeTrace
+
+    local function Linear( y0, y1, t )
+        return y0 + t * ( y1 - y0 )
+    end
+    local function Cosine( y0, y1, t )
+        return Linear( y0, y1, -math.cos( math.pi * t ) / 2 + 0.5 )
+    end
 
     Mech:SetInit( function( self )
-
+        self.Walk = 0
+        self.Strafe = 0
     end )
 
     Mech:SetThink( function( self )
@@ -38,20 +47,22 @@ if SERVER then
             s = self.Vehicle:GetDriver():KeyDown( IN_BACK ) and 1 or 0
             d = self.Vehicle:GetDriver():KeyDown( IN_MOVERIGHT ) and 1 or 0
 
-            aim = self.Vehicle:GetDriver():GetEyeTrace().HitPos
+            aim = podEyeTrace( self.Vehicle:GetDriver() ).HitPos
         else
             aim = self.Entity:GetPos() + self.Entity:GetForward() * 100
-
             if self.Entity:GetPilot() ~= nil then self.Entity:SetPilot( nil ) end
         end
+
+        self.Walk = Cosine( self.Walk, w - s, 0.1 )
+        self.Strafe = Cosine( self.Strafe, d - a, 0.1 )
 
         local hover = rangerOffset( 150, self.Entity:GetPos(), Vector( 0, 0, -1 ), { self.Entity, self.Vehicle, self.Vehicle:GetDriver() } )
         if hover.Hit then
             local dist = hover.HitPos:Distance( phys:GetPos() )
 
             local forceu = Vector( 0, 0, 100 - dist ) * 5 - divVA( phys:GetVelocity(), Vector( 20, 20, 5 ) )
-            local forcef = self.Entity:GetForward() * ( w - s ) * 15
-            local forcer = self.Entity:GetRight() * ( d - a ) * 7.5
+            local forcef = self.Entity:GetForward() * ( 15 * self.Walk )
+            local forcer = self.Entity:GetRight() * ( 7.5 * self.Strafe )
 
             phys:EnableGravity( false )
             phys:ApplyForceCenter( ( forceu + forcef + forcer ) * phys:GetMass() )
@@ -200,6 +211,7 @@ local sign = Helper.Sign
 local lerp = Helper.Lerp
 local bearing = Helper.Bearing
 local toLocalAxis = Helper.ToLocalAxis
+local podEyeTrace = Helper.PodEyeTrace
 
 local angle = FindMetaTable( "Angle" )
 
@@ -228,19 +240,28 @@ local function anim( ent, pos, hip, fem, tib, tars, foot, length0, length1, leng
 
     tib:SetAngles( fem:LocalToWorldAngles( Angle( atan( -laxis.z, laxis.x ) + acos( ( dist ^ 2 + length1 ^ 2 - length2 ^ 2 ) / ( 2 * length1 * dist ) ) - 90, 0, 0 ) ) )
     tars:SetAngles( tib:LocalToWorldAngles( Angle( acos( ( length2 ^ 2 + length1 ^ 2 - dist ^ 2 ) / ( 2 * length1 * length2 ) ) + 180, 0, 0 ) ) )
+
     foot:SetAngles( Angle( 0, ent:GetAngles().y, 0 ) )
 end
 
 Mech:SetThink( function( self )
     local vel = self.Entity:GetVelocity()
 
-    local aim
+    local aim = Vector()
+    local w, a, s, d = 0, 0, 0, 0
     if IsValid( self.Entity:GetPilot() ) then
         self.Entity:GetPilot():SetNoDraw( true )
-        aim = self.Entity:GetPilot():GetEyeTrace().HitPos
+        aim = podEyeTrace( self.Entity:GetPilot() ).HitPos
+
+        w = self.Entity:GetPilot():KeyDown( IN_FORWARD ) and 1 or 0
+        a = self.Entity:GetPilot():KeyDown( IN_MOVELEFT ) and 1 or 0
+        s = self.Entity:GetPilot():KeyDown( IN_BACK ) and 1 or 0
+        d = self.Entity:GetPilot():KeyDown( IN_MOVERIGHT ) and 1 or 0
     else
         aim = self.Entity:GetPos() + self.Entity:GetForward() * 100
     end
+
+
 
     --local angVel = ( self.Entity:GetAngles() - self.AngVel ) * ( 1 / FrameTime() )
     local angVel = ( self.Entity:GetAngles() - self.AngVel ) * ( 1 / 66.666667 )
@@ -249,11 +270,11 @@ Mech:SetThink( function( self )
     self:RunAllGaits( ( vel:Length() + math.abs( angVel.y ) ) / 750, vel / 4 )
 
     self.HeightDiff = lerp( self.HeightDiff, math.Clamp( self:GetGaitDiff( "Right", "Left" ), -50, 50 ), 0.5 )
-    self.Holograms[1]:SetPos( self.Entity:LocalToWorld( Vector( 0, -self.HeightDiff / 3, math.abs( self.HeightDiff / 3 ) ) ) )
+    self.Holograms[1]:SetPos( self.Entity:LocalToWorld( Vector( 0, -self.HeightDiff / 5, math.abs( self.HeightDiff / 2 ) ) ) )
     self.Holograms[1]:SetAngles( self.Entity:LocalToWorldAngles( Angle( 0, 0, -self.HeightDiff / 3 ) ) )
 
     self.Holograms[2]:SetAngles( self.Holograms[1]:GetAngles():SetRoll( 0 ) )
-    self.Holograms[3]:SetAngles( ( aim - self.Holograms[3]:GetPos() ):Angle() )
+    self.Holograms[3]:SetAngles( ( ( aim or Vector() ) - self.Holograms[3]:GetPos() ):Angle() )
 
     self.Holograms[4]:SetAngles( self.Holograms[1]:GetAngles():SetRoll( -math.abs( self.HeightDiff / 4 ) ) )
     self.Holograms[10]:SetAngles( self.Holograms[1]:GetAngles():SetRoll( math.abs( self.HeightDiff / 4 ) ) )

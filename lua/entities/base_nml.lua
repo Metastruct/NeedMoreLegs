@@ -40,8 +40,9 @@ end
 function ENT:CreateSeat()
     self.Seat = ents.Create( "prop_vehicle_prisoner_pod" )
 
+    self.Seat:SetKeyValue ("limitview", "0" )
     self.Seat:SetPos( self:GetPos() + Vector( 0, 0, 25 ) )
-    self.Seat:SetModel( "models/Nova/airboat_seat.mdl" )
+    self.Seat:SetModel( "models/nova/jeep_seat.mdl" )
     self.Seat:SetAngles( Angle( 0, -90, 0 ) )
     self.Seat:SetParent( self )
 
@@ -69,7 +70,7 @@ function ENT:Initialize()
     self.NML = NML_GetMechType( "gtb22" ) or nil
 
     if SERVER then
-        self:SetModel( "models/hunter/blocks/cube025x025x025.mdl" )
+        self:SetModel( "models/hunter/blocks/cube2x2x2.mdl" )
 
         --self:PhysicsInit( SOLID_VPHYSICS )
         --self:SetMoveType( MOVETYPE_VPHYSICS )

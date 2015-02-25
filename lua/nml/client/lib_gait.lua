@@ -55,6 +55,8 @@ function meta:DoWalkAnimation( active, interp, addVel )
             local distance = self.StepPointC:Distance( traceD.HitPos )
 
             if distance > 15 + self.GroundHeight then
+                sound.Play( "nml/servo.wav", self.StepPointA, 75, 75 + addVel:Length() / 25 + math.random( -10, 10 ) )
+
                 self.StepPointA = self.StepPointC
                 self.StepPointC = traceD.HitPos + traceD.HitNormal * self.GroundHeight
                 self.StepPointB = ( self.StepPointA + self.StepPointC ) / 2 + traceD.HitNormal * ( math.Clamp( distance / 2, 10, 50 ) + self.GroundHeight*0 )
@@ -114,7 +116,10 @@ end
 
 function meta:Think( walkVel, addVel )
     local gaitSize = 0.5 -- math.Clamp( 0.4 + 0.03 * walkVel / 100, 0, 1 )
-    self.WalkCycle = self.WalkCycle + ( ( 0.05 + 0.03 * walkVel ) * 20 ) * FrameTime()
+    local add = math.Max( 0.05, math.Round( ( 1 - walkVel ) / 15, 2 ) )
+
+    self.WalkCycle = self.WalkCycle + ( ( add + 0.03 * walkVel ) * 20 ) * FrameTime()
+    --self.WalkCycle = self.WalkCycle + ( ( 0.05 + 0.03 * walkVel ) * 20 ) * FrameTime()
     self:DoWalkCycle( gaitSize - math.floor( gaitSize ), addVel )
 end
 

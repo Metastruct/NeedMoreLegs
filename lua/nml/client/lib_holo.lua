@@ -249,7 +249,6 @@ function meta:SetPos( vec )
 end
 
 function meta:SetAngles( ang )
-    --self.ang = LerpAngle( FrameTime(), self.ang, ang )
     self.ang = ang
     self.flags.updateang = true
 end
@@ -284,7 +283,7 @@ function meta:SetDisableShading( shading )
     self.flags.shading = shading or false
 end
 
-function meta:SetDrawBones( drawBones )
+function meta:SetDisplayBones( drawBones )
     self.flags.showbones = drawBones or false
 end
 
