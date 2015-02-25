@@ -57,7 +57,7 @@ function meta:DoWalkAnimation( active, interp, addVel )
             if distance > 15 + self.GroundHeight then
                 self.StepPointA = self.StepPointC
                 self.StepPointC = traceD.HitPos + traceD.HitNormal * self.GroundHeight
-                self.StepPointB = ( self.StepPointA + self.StepPointC ) / 2 + traceD.HitNormal * ( math.Clamp( distance / 2, 10, 50 ) + self.GroundHeight )
+                self.StepPointB = ( self.StepPointA + self.StepPointC ) / 2 + traceD.HitNormal * ( math.Clamp( distance / 2, 10, 50 ) + self.GroundHeight*0 )
                 self.StepState  = 1
             else
                 self.StepState = -1
@@ -72,7 +72,12 @@ function meta:DoWalkAnimation( active, interp, addVel )
         end
     elseif self.StepState ~= 0 then
         self.StepState = 0
-        self.StepCurve = self.StepPointC
+        if self.StepCurve ~= self.StepPointC then
+            if LocalPlayer():GetPos():Distance( self.StepPointC ) < 500 then
+                util.ScreenShake( self.StepPointC, 5, 5, 0.25, 25 )
+            end
+            self.StepCurve = self.StepPointC
+        end
     end
 end
 
@@ -108,9 +113,8 @@ end
 ----------------------------------------------------------------------------------
 
 function meta:Think( walkVel, addVel )
-    local gaitSize = math.Clamp( 0.4 + 0.03 * walkVel / 100, 0, 1 )
-
-    self.WalkCycle = self.WalkCycle + ( ( 0.05 + 0.03 * walkVel ) * 30 ) * FrameTime()
+    local gaitSize = 0.5 -- math.Clamp( 0.4 + 0.03 * walkVel / 100, 0, 1 )
+    self.WalkCycle = self.WalkCycle + ( ( 0.05 + 0.03 * walkVel ) * 20 ) * FrameTime()
     self:DoWalkCycle( gaitSize - math.floor( gaitSize ), addVel )
 end
 

@@ -75,6 +75,10 @@ function meta:SetAuthor( author )
     self.Author = author
 end
 
+function meta:SetVehicle( vehicle )
+    self.Vehicle = vehicle
+end
+
 function meta:SetEntity( entity )
     self.Entity = entity
     self.UniqueID = self.Name .. self.Entity:EntIndex()

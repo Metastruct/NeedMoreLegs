@@ -38,11 +38,18 @@ function Helper.Sign( a )
     return 0
 end
 
-----------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
 
-function Helper.Bearing( opos, oang, target )
+local function bearing( opos, oang, target )
     local pos, _ = WorldToLocal( target, Angle(), opos, oang )
     return rad2deg * -math.atan2( pos.y, pos.x )
+end
+Helper.Bearing = bearing
+
+function Helper.Bearing2( ent, target, mul, condition )
+    local yaw = ent:GetAngles().y
+    if not condition then return yaw end
+    return yaw - bearing( ent:GetPos(), Angle( 0, yaw, 0 ), target ) / mul
 end
 
 function Helper.ToLocalAxis( entity, axis )
@@ -90,5 +97,85 @@ local function rangerOffset( ... )
     return nil
 end
 Helper.RangerOffset = rangerOffset
+
+----------------------------------------------------------------------------------
+
+local function notHuge( value )
+    return -math.huge < value[1] and value[1] < math.huge and
+    -math.huge < value[2] and value[2] < math.huge and
+    -math.huge < value[3] and value[3] < math.huge
+end
+Helper.NotHuge = notHuge
+
+local function divVA( valueA, valueB )
+    if type( valueA ) == "Vector" and type( valueB ) == "Vector" then return Vector( valueA.x / valueB.x, valueA.y / valueB.y, valueA.z / valueB.z ) end
+    if type( valueA ) == "Angle" and type( valueB ) == "Angle" then return Angle( valueA.p / valueB.p, valueA.y / valueB.y, valueA.r / valueB.r ) end
+    return nil
+end
+Helper.DivVA = divVA
+
+local function mulVA( valueA, valueB )
+    if type( valueA ) == "Vector" and type( valueB ) == "Vector" then return Vector( valueA.x * valueB.x, valueA.y * valueB.y, valueA.z * valueB.z ) end
+    if type( valueA ) == "Angle" and type( valueB ) == "Angle" then return Angle( valueA.p * valueB.p, valueA.y * valueB.y, valueA.r * valueB.r ) end
+    return nil
+end
+Helper.MulVA = mulVA
+
+if SERVER then
+    local function inertiaAsAngle( ent )
+        local phys = ent:GetPhysicsObject()
+        if IsValid( phys ) then
+            local vec = phys:GetInertia()
+            return Angle( vec.y, vec.z, vec.x )
+        end
+        return Angle()
+    end
+    Helper.InertiaAsAngle = inertiaAsAngle
+
+    local function angVel( ent )
+        local phys = ent:GetPhysicsObject()
+        if IsValid( phys ) then
+            local vec = phys:GetAngleVelocity()
+            return Angle( vec.y, vec.z, vec.x )
+        end
+        return Angle()
+    end
+    Helper.AngVel = angVel
+
+    local function applyAngForce( ent, angForce )
+        if angForce.p == 0 and angForce.y == 0 and angForce.r == 0 then return end
+        if not notHuge( angForce ) then return end
+
+        local phys = ent:GetPhysicsObject()
+        if not IsValid( phys ) then return end
+
+        local up = ent:GetUp()
+        local left = ent:GetRight() * -1
+        local forward = ent:GetForward()
+
+        if angForce.p ~= 0 then
+            local pitch = up * ( angForce.p * 0.5 )
+            phys:ApplyForceOffset( forward, pitch )
+            phys:ApplyForceOffset( forward * -1, pitch * -1 )
+        end
+
+        if angForce.y ~= 0 then
+            local yaw = forward * ( angForce.y * 0.5 )
+            phys:ApplyForceOffset( left, yaw )
+            phys:ApplyForceOffset( left * -1, yaw * -1 )
+        end
+
+        if angForce.r ~= 0 then
+            local roll = left * ( angForce.r * 0.5 )
+            phys:ApplyForceOffset( up, roll )
+            phys:ApplyForceOffset( up * -1, roll * -1 )
+        end
+    end
+    Helper.ApplyAngForce = applyAngForce
+
+    function Helper.EZAngForce( ent, force, damping )
+        applyAngForce( ent, mulVA( force - angVel( ent ) * damping, inertiaAsAngle( ent ) ) )
+    end
+end
 
 ----------------------------------------------------------------------------------
