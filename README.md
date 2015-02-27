@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/shadowscion/NeedMoreLegs/master/materials/logo_nml.png" alt=""/>
 </p>
 
-Need More Legs is a robot/mecha focused addon for Garry's Mod that is designed around inverse kinematics and procedural animation.
+Need More Legs is a robot/mecha focused addon for Garry's Mod that is designed around inverse kinematics and procedural animation. [Documentation](https://dl.dropboxusercontent.com/u/10388108/web/needmorelegs/documentation/index.html) (Generated via [LDoc](https://github.com/stevedonovan/LDoc))
 
 <p align="center">
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=OylL29wIEtE
@@ -11,6 +11,3 @@ alt="Watch on Youtube!" title="Watch on Youtube!" width="560" height="315"/></a>
 </p>
 
 
-[Documentation](https://dl.dropboxusercontent.com/u/10388108/web/needmorelegs/documentation/index.html) (Generated via [LDoc](https://github.com/stevedonovan/LDoc))
-
-There will be bugs.
