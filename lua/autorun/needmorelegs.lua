@@ -1,35 +1,43 @@
-----------------------------------------------------------------------------------
+------------------------------------------------------------------------
+---- Need More Legs
+---- by shadowscion
+------------------------------------------------------------------------
+
+if SERVER then AddCSLuaFile() end
 
 NML = NML or {}
 
-----------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
-AddCSLuaFile()
+local types = {
+    ["sv"] = function( path ) if SERVER then include( path ) end end,
+    ["sh"] = function( path ) if SERVER then AddCSLuaFile( path ) end include( path ) end,
+    ["cl"] = function( path ) if SERVER then AddCSLuaFile( path ) else include( path ) end end,
+}
 
-AddCSLuaFile( "nml/shared/properties.lua" )
-AddCSLuaFile( "nml/shared/lib_mech.lua" )
-AddCSLuaFile( "nml/shared/lib_helper.lua" )
-AddCSLuaFile( "nml/client/lib_holo.lua" )
-AddCSLuaFile( "nml/client/lib_gait.lua" )
-AddCSLuaFile( "nml/client/thirdperson.lua" )
-
-include( "nml/shared/properties.lua" )
-include( "nml/shared/lib_mech.lua" )
-include( "nml/shared/lib_helper.lua" )
-
-----------------------------------------------------------------------------------
-
-if CLIENT then
-    include( "nml/client/lib_holo.lua" )
-    include( "nml/client/lib_gait.lua" )
-    include( "nml/client/thirdperson.lua" )
+local function LoadLibFiles()
+    local files, folders = file.Find( "nml/libraries/*.lua", "LUA" )
+    for _, file in pairs( files ) do
+        local type = string.sub( file, 1, 2 )
+        if types[type] then types[type]( "nml/libraries/" .. file ) end
+    end
 end
 
-for _, path in pairs( file.Find( "nml/shared/types/*.lua", "LUA" ) ) do
-    local path = "nml/shared/types/" .. path
+local function LoadMechFiles()
+    local root = "nml/mechtypes/"
+    local _, folders = file.Find( root .. "*", "LUA" )
 
-    AddCSLuaFile( path )
-    include( path )
+    for _, subfolder in pairs( folders ) do
+        local files, _ = file.Find( root .. subfolder .. "/*.lua", "LUA" )
+        for _, file in pairs( files ) do
+            local type = string.sub( file, 1, 2 )
+            if types[type] then types[type]( root ..subfolder .. "/" .. file ) end
+        end
+    end
 end
 
-----------------------------------------------------------------------------------
+LoadLibFiles()
+LoadLibFiles()
+LoadMechFiles()
+
+------------------------------------------------------------------------

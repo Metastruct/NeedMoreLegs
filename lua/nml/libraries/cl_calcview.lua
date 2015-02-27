@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
---- Thirdperson Camera - by shadowscion
+---- NML Camera - by shadowscion
 ----------------------------------------------------------------------------------
 
 local view = {
@@ -17,7 +17,8 @@ local reset = true
 ----------------------------------------------------------------------------------
 
 local function ShouldEnable( ply )
-    if not ply:InVehicle() then return false end
+    if not ply:InVehicle() or not IsValid( ply:GetVehicle():GetParent() ) then return false end
+    if ply:GetVehicle():GetParent():GetClass() ~= "sent_nml_base" then return false end
     if not ply:GetVehicle():GetThirdPersonMode() then return false end
     if not ply:Alive() or ply:GetViewEntity() ~= ply then return false end
 
@@ -42,11 +43,11 @@ local function CalcView( ply, origin, angles, fov )
     end
 
     trace.start = eyePos
-    trace.endpos = eyePos - eyeDir * zoom
+    trace.endpos = eyePos - eyeDir*zoom
 
     local dist = eyePos:Distance( util.TraceLine( trace ).HitPos ) - 10
 
-    view.origin = LerpVector( 0.1, view.origin, eyePos - eyeDir * dist )
+    view.origin = LerpVector( 0.1, view.origin, eyePos - eyeDir*dist )
     view.angles = LerpAngle( 0.1, view.angles, eyeDir:Angle() )
     view.fov = fov
 
@@ -74,8 +75,8 @@ local function DoZoom( ply, bind, pressed )
     local key = input.LookupBinding( bind )
     if not key and pressed then return end
 
-    if key == "MWHEELDOWN" then zoom = math.Clamp( zoom - 50, 50, 1000 ) end
-    if key == "MWHEELUP" then zoom = math.Clamp( zoom + 50, 50, 1000 ) end
+    if key == "MWHEELDOWN" then zoom = math.Clamp( zoom - 50, 150, 1000 ) end
+    if key == "MWHEELUP" then zoom = math.Clamp( zoom + 50, 150, 1000 ) end
 end
 
 hook.Remove( "PlayerBindPress", "ThirdPersonViewTest" )
