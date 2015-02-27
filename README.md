@@ -9,3 +9,8 @@ Need More Legs is a robot/mecha focused addon for Garry's Mod that is designed a
 " target="_blank"><img src="http://img.youtube.com/vi/OylL29wIEtE/0.jpg" 
 alt="Watch on Youtube!" title="Watch on Youtube!" width="560" height="315"/></a>
 </p>
+
+
+[Documentation](https://dl.dropboxusercontent.com/u/10388108/web/needmorelegs/documentation/index.html) (Generated via [LDoc](https://github.com/stevedonovan/LDoc))
+
+There will be bugs.
