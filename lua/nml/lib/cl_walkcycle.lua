@@ -49,12 +49,22 @@ function NML_CreateNewWalkCycle( entity, offset, stepOrder, groundHeight )
     self.StepStart = stepOrder - math.floor( stepOrder )
     self.StepState = 0
     self.WalkCycle = 0
+    self.WalkVel   = 0
 
     return self
 end
 
 --- Walkcycle Meta Functions
 -- @section
+
+--- Sets the step sound for the walk cycle
+-- @function WalkCycle:SetStepSound
+-- @tparam String Sound Must exist on the client
+-- @usage WalkCycle:SetTepSound( "sound/somefile.wav" )
+function WalkCycle:SetStepSound( sound )
+    if not file.Exists( sound, "GAME" ) then return end
+    self.StepSound = sound
+end
 
 --- Step animation function
 -- @function WalkCycle:DoWalkAninimation
@@ -72,13 +82,18 @@ function WalkCycle:DoWalkAnimation( active, interp, addVel )
             local distance = self.StepPointC:Distance( traceD.HitPos )
 
             --if distance > 15 + math.Min( addVel:Length(), self.GroundHeight ) then
+            --print( math.Max( 0, ( 15 + self.GroundHeight ) - addVel:Length() ) )
             if distance > 15 + self.GroundHeight then
-                sound.Play( "nml/servo.wav", self.StepPointA, 75, 75 + addVel:Length()/25 + math.random( -10, 10 ) )
-
                 self.StepPointA = self.StepPointC
                 self.StepPointC = traceD.HitPos + traceD.HitNormal*self.GroundHeight
                 self.StepPointB = ( self.StepPointA + self.StepPointC )/2 + traceD.HitNormal*( math.Clamp( distance/2, 10, 50 ) + self.GroundHeight*0 )
                 self.StepState  = 1
+
+                if self.StepSound then
+                    if LocalPlayer():GetPos():Distance( self.StepPointB ) < 500 then
+                        sound.Play( "nml/servo.wav", self.StepPointB, 75, 65 + addVel:Length()/15 + math.random( -10, 10 ) )
+                    end
+                end
             else
                 self.StepState = -1
             end
@@ -138,10 +153,14 @@ end
 -- @tparam Vector AddVel How far the step will jump from it's current position
 -- @usage WalkCycle:Think( Entity:GetVelocity():Length()/100, Entity:GetVelocity()/10 )
 function WalkCycle:Think( walkVel, addVel )
-    local gaitSize = 0.5 -- math.Clamp( 0.4 + 0.03*walkVel/100, 0, 1 )
-    local add = math.Max( 0.05, math.Round( ( 1 - walkVel )/25, 2 ) )
+    self.WalkVel = walkVel -- Lerp( 0.1, walkVel, self.WalkVel )
+    self.WalkCycle = self.WalkCycle + ( 0.05 + 0.03*self.WalkVel )*20*FrameTime()
 
-    self.WalkCycle = self.WalkCycle + ( ( add + 0.03*walkVel )*20 )*FrameTime()
-    --self.WalkCycle = self.WalkCycle + ( ( 0.05 + 0.03*walkVel )*20 )*FrameTime()
+    local gaitSize = 0.5 -- math.Clamp( 0.5 + 0.03*self.WalkVel/100, 0, 1 )
+
     self:DoWalkCycle( gaitSize - math.floor( gaitSize ), addVel )
 end
+
+    -- local gaitSize = 0.5
+    -- self.WalkCycle = self.WalkCycle + ( ( 0.05 + 0.03*walkVel )*20 )*FrameTime()
+    -- self:DoWalkCycle( gaitSize - math.floor( gaitSize ), addVel )

@@ -1,0 +1,13 @@
+"VertexLitGeneric"
+{
+    "$model"       "1"
+    "$baseTexture" "nml/lostplanet/weapons/rocketlauncher_inside_d"
+    "$bumpmap"     "nml/lostplanet/weapons/rocketlauncher_inside_n"
+
+    "$halflambert"   "1"
+
+    "$phong"              "1"
+    "$phongboost"         "1.05"
+    "$phongexponent"      "54.8"
+    "$phongfresnelranges" "[.1 1 1]"
+}

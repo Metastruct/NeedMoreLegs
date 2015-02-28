@@ -7,6 +7,10 @@ if not CLIENT then return end
 
 local Mech = NML_CreateMechType( "gtb22" )
 
+Mech:AddSkin( 0, "Lost Planet ( White )" )
+Mech:AddSkin( 1, "Lost Planet ( Red )" )
+Mech:AddSkin( 2, "Combine Mech" )
+
 local schematic = {
     {
         Parent   = 0,
@@ -83,6 +87,16 @@ local schematic = {
         Model    = "models/nml/lostplanet/gtb22/part_l_leg_d.mdl",
         Position = Vector( 0, 0, -48.312 ),
     };
+    {
+        Parent   = 3,
+        Model    = "models/nml/lostplanet/weapons/part_grenadelauncher.mdl",
+        Position = Vector( -10, -32, 32.5 )
+    };
+    {
+        Parent   = 3,
+        Model    = "models/nml/lostplanet/weapons/part_rocketlauncher.mdl",
+        Position = Vector( -10, 32, 32.5 )
+    };
 }
 
 Mech:SetInit( function( self )
@@ -90,18 +104,22 @@ Mech:SetInit( function( self )
     self:LoadModelFromData( schematic )
 
     -- Setup gaits
-    self:AddLeg( "Right", Vector( -10, -25, 0 ), 0, 15 )
-    self:AddLeg( "Left", Vector( -10, 25, 0 ), 0.5, 15 )
+    self:AddLeg( "Right", Vector( -10, -25, 0 ), 0, 15 ):SetStepSound( "sound/nml/servo.wav" )
+    self:AddLeg( "Left", Vector( -10, 25, 0 ), 0.5, 15 ):SetStepSound( "sound/nml/servo.wav" )
 
     -- Setup initial values
     self.OldAngles  = self.Entity:GetAngles()
     self.HeightDiff = 0
+    self.Crouch = 0
+    self.Seed = CurTime() + math.random( -100, 100 )
 end )
 
 local math = math
 
 local Helper         = NML.Helper
 local lerp           = Helper.CLerp
+local sin            = Helper.Sin
+local cos            = Helper.Cos
 local acos           = Helper.Acos
 local atan           = Helper.Atan
 local bearing        = Helper.Bearing
@@ -144,6 +162,7 @@ Mech:SetThink( function( self )
     local angles = entity:GetAngles()
     local vel = entity:GetVelocity()
     local w, a, s, d = 0, 0, 0, 0
+    local ctrl = 0
 
     if IsValid( self:GetDriver() ) then
         aimPos = podEyeTrace( self:GetDriver() ).HitPos
@@ -152,6 +171,8 @@ Mech:SetThink( function( self )
         a = self:GetDriver():KeyDown( IN_MOVELEFT ) and 1 or 0
         s = self:GetDriver():KeyDown( IN_BACK ) and 1 or 0
         d = self:GetDriver():KeyDown( IN_MOVERIGHT ) and 1 or 0
+
+        ctrl = self:GetDriver():KeyDown( IN_DUCK ) and 1 or 0
     else
         aimPos = entity:GetPos() + entity:GetForward()*100
     end
@@ -164,20 +185,32 @@ Mech:SetThink( function( self )
     self.OldAngles = entity:GetAngles()
 
     -- Run the leg walk cycles
-    self:RunAllLegs( ( vel:Length() + math.abs( angVel.y / 3 ) )/750, vel/4 )
+    self:RunAllLegs( ( vel:Length() + math.abs( angVel.y/3 ) )/750, vel/4 )
 
     -- Animate the pelvis
-    self.HeightDiff = lerp( self.HeightDiff, math.Clamp( self:GetLegDiff( "Right", "Left" ), -50, 50 ), 0.5 )
+    local time = CurTime() + self.Seed
+    local stime = sin( time*100 )*2
+    local ctime = cos( time*100 )*2
 
-    holo[1]:SetPos( entity:LocalToWorld( Vector( 0, -self.HeightDiff/5, aimAngle.p/5 + math.abs( self.HeightDiff/2 ) ) ) )
-    holo[1]:SetAngles( entity:LocalToWorldAngles( Angle( 0, 0, -self.HeightDiff/3 ) ) )
+    self.HeightDiff = lerp( self.HeightDiff, math.Clamp( self:GetLegDiff( "Right", "Left" ), -50, 50 ), 0.5 )
+    self.Crouch = lerp( self.Crouch, ctrl*20, 0.15 )
+
+    holo[1]:SetPos( entity:LocalToWorld( Vector( 0, -self.HeightDiff/5, aimAngle.p/5 + math.abs( self.HeightDiff/2 ) - self.Crouch - ctime ) ) )
+    holo[1]:SetAngles( entity:LocalToWorldAngles( Angle( -stime + self.Crouch, 0, -self.HeightDiff/3 ) ) )
 
     -- Animate the torso and head
-    local headAngle = holo[2]:WorldToLocalAngles( LerpAngle( 0.05, holo[3]:GetAngles(), aimAngle ) )
+    local headAngle = holo[2]:WorldToLocalAngles( LerpAngle( 10*FrameTime(), holo[3]:GetAngles(), aimAngle ) )
     holo[3]:SetAngles( holo[2]:LocalToWorldAngles( Angle( math.Clamp( headAngle.p, -35, 25 ), headAngle.y, headAngle.r ) ) )
 
-    holo[4]:SetAngles( holo[1]:LocalToWorldAngles( Angle( 0, 0, -math.abs( self.HeightDiff/4 ) ) ) )
-    holo[10]:SetAngles( holo[1]:LocalToWorldAngles( Angle( 0, 0, math.abs( self.HeightDiff/4 ) ) ) )
+    holo[4]:SetAngles( holo[1]:LocalToWorldAngles( Angle( 0, 0, -math.abs( self.HeightDiff/4 ) - ctime ) ) )
+    holo[10]:SetAngles( holo[1]:LocalToWorldAngles( Angle( 0, 0, math.abs( self.HeightDiff/4 ) + ctime ) ) )
+
+    -- Animate the weapons
+    local grenadeAngle = holo[3]:WorldToLocalAngles( ( ( aimPos or Vector() ) - holo[16]:GetPos() ):Angle() )
+    holo[16]:SetAngles( holo[3]:LocalToWorldAngles( Angle( math.Clamp( grenadeAngle.p, -45, 35 ), math.Clamp( grenadeAngle.y, -35, 15 ), 0 ) ) )
+
+    local rocketAngle = holo[3]:WorldToLocalAngles( ( ( aimPos or Vector() ) - holo[17]:GetPos() ):Angle() )
+    holo[17]:SetAngles( holo[3]:LocalToWorldAngles( Angle( math.Clamp( rocketAngle.p, -45, 35 ), math.Clamp( rocketAngle.y, -15, 35 ), 0 ) ) )
 
     -- Animate the legs
     legIK( entity, self.Legs["Right"].StepCurve, holo[5], holo[6],  holo[7],  holo[8],  holo[9],  29.998, 26.526, 48.312, 1 )

@@ -51,7 +51,6 @@ end )
 --- Hologram Meta Object
 -- @section
 
-
 local Hologram = {}
 Hologram.__index = Hologram
 

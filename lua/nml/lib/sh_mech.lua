@@ -14,13 +14,11 @@ Mech.__index = Mech
 -- @return MechType
 -- @usage local Mech = NML_CreateMechType( "Base_Mech" )
 function NML_CreateMechType( name )
-    local self = {
-        Name   = name,
-        Skin   = 0,
-        Skins  = {},
-        DisableShading = false,
-        DisplayBones   = false,
-    }
+    local self = { Name = name }
+
+    if CLIENT then
+        self.Skins = {}
+    end
 
     list.Set( "list_nml_mechs", name, self )
 
@@ -56,6 +54,10 @@ function Mech:SetInit( initialize )
         if CLIENT then
             self.CSHolobase = NML_CSHolobase()
             self.CSHolograms = {}
+
+            self.Skin = self.Entity:GetMechSkin()
+            self.ShowBones = self.Entity:GetShowBones()
+            self.DisableShading = self.Entity:GetDisableShading()
 
             self.Entity:CallOnRemove( "GarbageDay", function( ent )
                 self.CSHolobase:Remove()
@@ -105,6 +107,18 @@ function Mech:StartThink()
 
         if SERVER then
             self.Entity:SetBaseDriver( self.Entity:GetBaseVehicle():GetDriver() or nil )
+
+            local phys = self.Entity:GetPhysicsObject()
+            if IsValid( phys ) then
+                phys:EnableMotion( true )
+
+                if phys:GetVelocity():Length() > 1000 then phys:AddVelocity( -phys:GetVelocity()/1.25 ) end
+                if phys:GetAngleVelocity():Length() > 500 then phys:AddAngleVelocity( -phys:GetAngleVelocity()/1.25 ) end
+            end
+        else
+            self:ResetSkin()
+            self:ResetShowBones()
+            self:ResetDisableShading()
         end
 
         self:Think()
@@ -165,13 +179,19 @@ function Mech:LoadModelFromData( data )
             part:SetModel( info.Model or "" )
             part:SetMaterial( info.Material or nil )
 
+            -- Update
             part:UpdatePos()
             part:UpdateAngles()
+
+            part:SetSkin( self.Skin )
+            part:SetFlagShowBone( self.ShowBones )
+            part:SetFlagDisableShading( self.DisableShading )
 
             self.CSHolograms[i] = part
 
             coroutine.yield( false )
         end
+
         coroutine.yield( true )
     end )
 
@@ -184,12 +204,73 @@ function Mech:LoadModelFromData( data )
     end )
 end
 
+--- Add a skin to the mech ( will also add to context menu )
+-- @function Mech:AddSkin
+-- @tparam Number ID -- Will not do anything if the model doesn't have a skin with this id
+-- @tparam String Name
+-- @usage Mech:AddSkin( 0, "SkinA" )
+function Mech:AddSkin( id, name )
+    if type( id ) ~= "number" then return end
+    self.Skins[id] = name
+end
+
+--- Set the skin of the mech ( handled internally )
+-- @function Mech:ResetSkin
+function Mech:ResetSkin()
+    if not self.CSHolograms then return end
+    if self.Skin == self.Entity:GetMechSkin() then return end
+
+    self.Skin = self.Entity:GetMechSkin()
+    for i, part in pairs( self.CSHolograms ) do
+        part:SetSkin( self.Skin )
+        print( i )
+    end
+end
+
+--- Draw the bones of the mech ( handled internally )
+-- @function Mech:ResetShowBones
+function Mech:ResetShowBones()
+    if not self.CSHolograms then return end
+    if self.ShowBones == self.Entity:GetShowBones() then return end
+
+    self.ShowBones = self.Entity:GetShowBones()
+    for i, part in pairs( self.CSHolograms ) do
+        part:SetFlagShowBone( self.ShowBones )
+    end
+end
+
+--- Disable the shading of the mech ( handled internally )
+-- @function Mech:SetDisableShading
+function Mech:ResetDisableShading( shading )
+    if not self.CSHolograms then return end
+    if self.DisableShading == self.Entity:GetDisableShading() then return end
+
+    self.DisableShading = self.Entity:GetDisableShading()
+    for i, part in pairs( self.CSHolograms ) do
+        part:SetFlagDisableShading( self.DisableShading )
+    end
+end
+
+--- Adds a walkcycle leg object to the mech
+-- @function Mech:AddLeg
+-- @tparam String Name
+-- @tparam Vector Offset
+-- @tparam Number StepOrder
+-- @tparam Number GroundHeight
+-- @return WalkCycleObj
+-- @usage local Leg = Mech:AddLeg( "Right", Vector( 0, 20, 0 ), 0, 15 )
 function Mech:AddLeg( name, offset, stepOrder, groundHeight )
     if not self.Entity then return nil end
     if not self.Legs then self.Legs = {} end
     self.Legs[name] = NML_CreateNewWalkCycle( self.Entity, offset, stepOrder, groundHeight )
+    return self.Legs[name]
 end
 
+--- Runs every leg attached to the mech
+-- @function Mech:RunAllLegs
+-- @tparam Number WalkVel How fast the cycle runs
+-- @tparam Vector AddVel How far the step will jump from it's current position
+-- @usage Mech:RunAllLegs( Entity:GetVelocity():Length()/100, Entity:GetVelocity()/10 )
 function Mech:RunAllLegs( walkVel, addVel )
     if not self.Legs then return end
     for _, leg in pairs( self.Legs ) do
@@ -197,97 +278,13 @@ function Mech:RunAllLegs( walkVel, addVel )
     end
 end
 
+--- Returns the difference between the height of two legs
+-- @function Mech:GetLegDiff
+-- @tparam Leg LegA
+-- @tparam Leg LegB
+-- @return Number Diff
+-- @usage local HeightDiff = Mech:GetLegDiff( "Right", "Left" )
 function Mech:GetLegDiff( legA, legB )
     if not self.Legs or not self.Legs[legA] or not self.Legs[legB] then return 0 end
     return ( ( self.Legs[legA].StepCurve - self.Legs[legA].StepPointC ) - ( self.Legs[legB].StepCurve - self.Legs[legB].StepPointC ) ).z
 end
-
---[[
-
---- MechType Properties and Details
--- @section
-
---- Sets the base entity of the mechtype
--- @function Mech:SetEntity
--- @tparam Entity Entity
--- @usage Mech:SetEntity( Entity( 50 ) )
-function Mech:SetEntity( entity )
-    self.Entity = entity
-    self.UniqueID = self.Name .. self.Entity:EntIndex()
-end
-
---- Sets the base vehicle of the mechtype
--- @function Mech:SetVehicle
--- @tparam Entity Vehicle
--- @usage Mech:SetVehicle( Entity( 50 ) )
-function Mech:SetVehicle( vehicle )
-    self.Vehicle = vehicle
-end
-
-
-
-function Mech:SetDisableShading( status )
-    self.DisableShading = status or false
-
-    if SERVER then return end
-
-    if not self.Holograms then return end
-    for _, part in pairs( self.Holograms ) do
-        part:SetDisableShading( self.DisableShading )
-    end
-end
-
-function Mech:SetDisplayBones( status )
-    self.DisplayBones = status or false
-
-    if SERVER then return end
-
-    if not self.Holograms then return end
-    for _, part in pairs( self.Holograms ) do
-        part:SetDisplayBones( self.DisplayBones )
-    end
-end
-
-function Mech:SetSkin( skinID )
-    if not self.Skins[skinID] then return end
-    self.Skin = skinID
-
-    if SERVER then return end
-
-    if not self.Holograms then return end
-    for _, part in pairs( self.Holograms ) do
-        part:SetSkin( self.Skin )
-    end
-end
-
-----------------------------------------------------------------------------------
-
-function Mech:AddSkin( skinID, name )
-    self.Skins[skinID] = name
-end
-
-----------------------------------------------------------------------------------
-
-if not CLIENT then return end
-
-----------------------------------------------------------------------------------
-
-function Mech:AddGait( name, hipPos, stepOrder, groundHeight )
-    if not self.Gaits then self.Gaits = {} end
-    self.Gaits[name] = NML_CreateNewGait( self.Entity, hipPos, stepOrder, groundHeight )
-end
-
-function Mech:RunAllGaits( rate, addVel )
-    if not self.Gaits then return end
-    for _, gait in pairs( self.Gaits ) do
-        gait:Think( rate, addVel )
-    end
-end
-
-function Mech:GetGaitDiff( gaitA, gaitB )
-    if not self.Gaits or not self.Gaits[gaitA] or not self.Gaits[gaitB] then return 0 end
-    return ( ( self.Gaits[gaitA].StepCurve - self.Gaits[gaitA].StepPointC ) - ( self.Gaits[gaitB].StepCurve - self.Gaits[gaitB].StepPointC ) ).z
-end
-
-----------------------------------------------------------------------------------
-]]--

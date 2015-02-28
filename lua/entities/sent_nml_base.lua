@@ -41,6 +41,9 @@ end
 function ENT:SetupDataTables()
     self:NetworkVar( "Entity", 0, "BaseVehicle" )
     self:NetworkVar( "Entity", 1, "BaseDriver" )
+    self:NetworkVar( "Bool", 0, "ShowBones" )
+    self:NetworkVar( "Bool", 1, "DisableShading" )
+    self:NetworkVar( "Int", 0, "MechSkin" )
 end
 
 function ENT:Initialize()

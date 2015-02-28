@@ -29,6 +29,7 @@ Mech:SetThink( function( self )
 
     local aimPos = Vector()
     local w, a, s, d = 0, 0, 0, 0
+    local ctrl = 0
 
     if IsValid( self:GetDriver() ) then
         aimPos = podEyeTrace( self:GetDriver() ).HitPos
@@ -37,6 +38,8 @@ Mech:SetThink( function( self )
         a = self:GetDriver():KeyDown( IN_MOVELEFT ) and 1 or 0
         s = self:GetDriver():KeyDown( IN_BACK ) and 1 or 0
         d = self:GetDriver():KeyDown( IN_MOVERIGHT ) and 1 or 0
+
+        ctrl = self:GetDriver():KeyDown( IN_DUCK ) and 1 or 0
     else
         aimPos = entity:GetPos() + entity:GetForward()*100
     end
@@ -49,13 +52,13 @@ Mech:SetThink( function( self )
         local dist = hover.HitPos:Distance( phys:GetPos() )
 
         local forceu = Vector( 0, 0, 100 - dist )*5 - divVA( phys:GetVelocity(), Vector( 20, 20, 5 ) )
-        local forcef = entity:GetForward()*( 15*self.Walk )
-        local forcer = entity:GetRight()*( 7.5*self.Strafe )
+        local forcef = entity:GetForward()*( ( 15 - ctrl*7.5 )*self.Walk )
+        local forcer = entity:GetRight()*( ( 7.5 - ctrl*3.75 )*self.Strafe )
 
         phys:EnableGravity( false )
         phys:ApplyForceCenter( ( forceu + forcef + forcer )*phys:GetMass() )
 
-        local turnTo = bearing2( entity, aimPos, 20 - 10*self.Walk, ( w + a + s + d ) ~= 0 )
+        local turnTo = bearing2( entity, aimPos, 15, ( w + a + s + d ) ~= 0 and math.abs( self.Walk ) > 0.9 )
         ezAngForce( entity, entity:WorldToLocalAngles( Angle( 0, turnTo, 0 ) )*200, 20 )
     else
         phys:EnableGravity( true )
