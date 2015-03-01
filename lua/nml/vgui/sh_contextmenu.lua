@@ -1,8 +1,11 @@
+----------------------------------------------------------------------------------
+---- NML Context Menu
+----------------------------------------------------------------------------------
+
 properties.Add( "nml_context_menu", {
     MenuLabel     = "Need More Legs",
     MenuIcon      = "icon16/picture_edit.png",
-    Order         = 99999,
-    PrependSpacer = true,
+    Order         = 0,
 
     Filter = function( self, ent, ply )
         if not IsValid( ent ) or ent:GetClass() ~= "sent_nml_base" then return false end
@@ -13,25 +16,25 @@ properties.Add( "nml_context_menu", {
         local mainMenu = option:AddSubMenu()
 
         local boneMenu = mainMenu:AddOption( "Show Bones", function()
-            self:MenuSetShowBones( ent, not ent:GetShowBones() )
+            --self:MenuSetShowBones( ent, not ent:GetShowBones() )
         end )
-        boneMenu:SetChecked( ent:GetShowBones() )
+        --boneMenu:SetChecked( ent:GetShowBones() )
 
         local shadingMenu = mainMenu:AddOption( "Disable Shading", function()
-            self:MenuSetDisableShading( ent, not ent:GetDisableShading() )
+            --self:MenuSetDisableShading( ent, not ent:GetDisableShading() )
         end )
-        shadingMenu:SetChecked( ent:GetDisableShading() )
+        --shadingMenu:SetChecked( ent:GetDisableShading() )
 
         -- Change Skins
-        if #ent.Mech.Skins > 0 then
-            local skinMenu = mainMenu:AddSubMenu( "Change Skin" )
-            local skinCount = #ent.Mech.Skins
+        -- if #ent.Mech.Skins > 0 then
+        --     local skinMenu = mainMenu:AddSubMenu( "Change Skin" )
+        --     local skinCount = #ent.Mech.Skins
 
-            for i = 0, skinCount do
-                local skin = skinMenu:AddOption( ent.Mech.Skins[i], function() self:MenuSetSkin( ent, i ) end )
-                if ent.Mech.Skin == i then skin:SetChecked( true ) end
-            end
-        end
+        --     for i = 0, skinCount do
+        --         local skin = skinMenu:AddOption( ent.Mech.Skins[i], function() self:MenuSetSkin( ent, i ) end )
+        --         if ent.Mech.Skin == i then skin:SetChecked( true ) end
+        --     end
+        -- end
     end,
 
     MenuSetDisableShading = function( self, ent, status )
@@ -67,17 +70,17 @@ properties.Add( "nml_context_menu", {
         if not self:Filter( ent, ply ) then return end
 
         if cmd == "skin" then
-            ent:SetMechSkin( net.ReadUInt( 16 ) or 0 )
+            --ent:SetMechSkin( net.ReadUInt( 16 ) or 0 )
             return
         end
 
         if cmd == "bones" then
-            ent:SetShowBones( tobool( net.ReadBit() ) )
+            --ent:SetShowBones( tobool( net.ReadBit() ) )
             return
         end
 
         if cmd == "shading" then
-            ent:SetDisableShading( tobool( net.ReadBit() ) )
+            --ent:SetDisableShading( tobool( net.ReadBit() ) )
             return
         end
     end

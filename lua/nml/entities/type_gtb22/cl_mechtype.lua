@@ -1,15 +1,31 @@
-------------------------------------------------------------------------
----- GTB-22
----- Clientside File
-------------------------------------------------------------------------
+------------------------------------------------------
+---- GTB-22 - Clientside File
+---- by shadowscion
+------------------------------------------------------
 
-if not CLIENT then return end
+local Addon = NML or {}
 
-local Mech = NML_CreateMechType( "gtb22" )
+local math = math
+local table = table
+local string = string
 
-Mech:AddSkin( 0, "Lost Planet ( White )" )
-Mech:AddSkin( 1, "Lost Planet ( Red )" )
-Mech:AddSkin( 2, "Combine Mech" )
+local Helper         = Addon.Helper
+
+local lerp           = Helper.Lerp
+local sin            = Helper.Sin
+local cos            = Helper.Cos
+local acos           = Helper.Acos
+local atan           = Helper.Atan
+local bearing        = Helper.Bearing
+local clampAng = Helper.ClampAng
+local toLocalAxis    = Helper.ToLocalAxis
+local podEyeTrace    = Helper.PodEyeTrace
+local traceToVector  = Helper.TraceToVector
+local traceDirection = Helper.TraceDirection
+
+------------------------------------------------------
+
+local Mech = Addon.CreateMechType( "type_gtb22", "nml_mechtypes" )
 
 local schematic = {
     {
@@ -99,34 +115,19 @@ local schematic = {
     };
 }
 
-Mech:SetInit( function( self )
-    -- Load the model
+------------------------------------------------------
+
+Mech:SetInitialize( function( self, ent )
     self:LoadModelFromData( schematic )
+    self:CreateGait( "L", Vector( -10, 25, 0 ), 29.998 + 26.526 + 48.312 + 100 )
+    self:CreateGait( "R", Vector( -10, -25, 0 ), 29.998 + 26.526 + 48.312 + 100 )
 
-    -- Setup gaits
-    self:AddLeg( "Right", Vector( -10, -25, 0 ), 0, 15 ):SetStepSound( "sound/nml/servo.wav" )
-    self:AddLeg( "Left", Vector( -10, 25, 0 ), 0.5, 15 ):SetStepSound( "sound/nml/servo.wav" )
-
-    -- Setup initial values
-    self.OldAngles  = self.Entity:GetAngles()
-    self.HeightDiff = 0
+    self.Height = 300
     self.Crouch = 0
-    self.Seed = CurTime() + math.random( -100, 100 )
+    self.Seed = CurTime() + math.random( -180, 180 )
 end )
 
-local math = math
-
-local Helper         = NML.Helper
-local lerp           = Helper.CLerp
-local sin            = Helper.Sin
-local cos            = Helper.Cos
-local acos           = Helper.Acos
-local atan           = Helper.Atan
-local bearing        = Helper.Bearing
-local toLocalAxis    = Helper.ToLocalAxis
-local podEyeTrace    = Helper.PodEyeTrace
-local traceToVector  = Helper.TraceToVector
-local traceDirection = Helper.TraceDirection
+------------------------------------------------------
 
 local function legIK( ent, pos, hip, fem, tib, tars, foot, length0, length1, length2, factor )
     length0 = length0*factor
@@ -150,76 +151,85 @@ local function legIK( ent, pos, hip, fem, tib, tars, foot, length0, length1, len
     foot:SetAngles( Angle( 0, ent:GetAngles().y, 0 ) )
 end
 
-Mech:SetThink( function( self )
+Mech:SetThink( function( self, ent, veh, ply, dt )
     if not self.CSHolobase then return end
-    if not self.CSHolobase.draw then return end
     if not self.CSHolograms then return end
 
-    -- Setup Vars
-    local holo   = self.CSHolograms
-    local entity = self.Entity
+    -- Setup Inputs
     local aimPos = Vector()
-    local angles = entity:GetAngles()
-    local vel = entity:GetVelocity()
     local w, a, s, d = 0, 0, 0, 0
-    local ctrl = 0
+    local ctrl, space, shift = 0, 0, 0
 
-    if IsValid( self:GetDriver() ) then
-        aimPos = podEyeTrace( self:GetDriver() ).HitPos
+    if IsValid( ply ) then
+        w = ply:KeyDown( IN_FORWARD ) and 1 or 0
+        a = ply:KeyDown( IN_MOVELEFT ) and 1 or 0
+        s = ply:KeyDown( IN_BACK ) and 1 or 0
+        d = ply:KeyDown( IN_MOVERIGHT ) and 1 or 0
 
-        w = self:GetDriver():KeyDown( IN_FORWARD ) and 1 or 0
-        a = self:GetDriver():KeyDown( IN_MOVELEFT ) and 1 or 0
-        s = self:GetDriver():KeyDown( IN_BACK ) and 1 or 0
-        d = self:GetDriver():KeyDown( IN_MOVERIGHT ) and 1 or 0
+        ctrl = ply:KeyDown( IN_DUCK ) and 1 or 0
 
-        ctrl = self:GetDriver():KeyDown( IN_DUCK ) and 1 or 0
+        aimPos = podEyeTrace( ply ).HitPos
     else
-        aimPos = entity:GetPos() + entity:GetForward()*100
+        aimPos = ent:GetPos() + ent:GetForward()*200 - Vector( 0, 0, 25 )
     end
 
-    local aimAngle = ( ( aimPos or Vector() ) - entity:GetPos() ):Angle()
-    aimAngle:Normalize()
+    -- Run Gait Sequence
+    local vel = ent:GetVelocity()
+    vel.z = 0
 
-    -- Clientside angular velocity workaround
-    local angVel   = ( entity:GetAngles() - self.OldAngles )*66.6666667
-    self.OldAngles = entity:GetAngles()
+    self.WalkVel = lerp( self.WalkVel, vel:Length(), 0.1 )
+    local multiplier = self.WalkVel/1000
 
-    -- Run the leg walk cycles
-    self:RunAllLegs( ( vel:Length() + math.abs( angVel.y/3 ) )/750, vel/4 )
+    self.WalkCycle = self.WalkCycle + ( 0.05 + 0.03*multiplier )*dt*30
+    local gaitSize = math.Clamp( 0.4 + 0.03*multiplier, 0, 0.9 )
 
-    -- Animate the pelvis
+    self:SetGaitStart( "L", 0, gaitSize )
+    self:SetGaitStart( "R", 0.5, gaitSize )
+    self:RunGaitSequence()
+
+    local diff = self:GetGaitDiff( "R", "L" )
+
+    -- Animate holograms
+    local holo = self.CSHolograms
+
     local time = CurTime() + self.Seed
     local stime = sin( time*100 )*2
     local ctime = cos( time*100 )*2
 
-    self.HeightDiff = lerp( self.HeightDiff, math.Clamp( self:GetLegDiff( "Right", "Left" ), -50, 50 ), 0.5 )
     self.Crouch = lerp( self.Crouch, ctrl*20, 0.15 )
 
-    holo[1]:SetPos( entity:LocalToWorld( Vector( 0, -self.HeightDiff/5, aimAngle.p/5 + math.abs( self.HeightDiff/2 ) - self.Crouch - ctime ) ) )
-    holo[1]:SetAngles( entity:LocalToWorldAngles( Angle( -stime + self.Crouch, 0, -self.HeightDiff/3 ) ) )
+    -- Pelvis
+    holo[1]:SetPos( ent:LocalToWorld( Vector( 0, 0, math.abs( diff/3 ) - ctime - self.Crouch ) ) )
+    holo[1]:SetAngles( ent:LocalToWorldAngles( Angle( -stime + self.Crouch, 0, -diff/3 ) ) )
 
-    -- Animate the torso and head
-    local headAngle = holo[2]:WorldToLocalAngles( LerpAngle( 10*FrameTime(), holo[3]:GetAngles(), aimAngle ) )
-    holo[3]:SetAngles( holo[2]:LocalToWorldAngles( Angle( math.Clamp( headAngle.p, -35, 25 ), headAngle.y, headAngle.r ) ) )
+    -- Torso
+    holo[4]:SetAngles( holo[1]:LocalToWorldAngles( Angle( 0, 0, -math.abs( diff/4 ) - ctime + 10 ) ) )
+    holo[10]:SetAngles( holo[1]:LocalToWorldAngles( Angle( 0, 0, math.abs( diff/4 ) + ctime - 10 ) ) )
 
-    holo[4]:SetAngles( holo[1]:LocalToWorldAngles( Angle( 0, 0, -math.abs( self.HeightDiff/4 ) - ctime ) ) )
-    holo[10]:SetAngles( holo[1]:LocalToWorldAngles( Angle( 0, 0, math.abs( self.HeightDiff/4 ) + ctime ) ) )
+    -- Head
+    local headCAng = holo[3]:GetAngles()
+    local headTAng = ( ( aimPos or Vector() ) - holo[3]:GetPos() ):Angle()
+    headTAng:Normalize()
 
-    -- Animate the weapons
-    local grenadeAngle = holo[3]:WorldToLocalAngles( ( ( aimPos or Vector() ) - holo[16]:GetPos() ):Angle() )
+    local headTPitch = math.ApproachAngle( headCAng.p, headTAng.p, dt*75 )
+    local headTYaw = math.ApproachAngle( headCAng.y, headTAng.y, dt*75 )
+
+    headTAng = holo[2]:WorldToLocalAngles( Angle( headTPitch, headTYaw, 0 ) )
+    holo[3]:SetAngles( holo[2]:LocalToWorldAngles( clampAng( headTAng, Angle( -20, -180, -180 ), Angle( 25, 180, 180 ) ) ) )
+
+    -- Weapons
+    local grenadeAngle = holo[3]:WorldToLocalAngles( ( ( aimPos or Vector() ) - holo[16]:LocalToWorld( Vector( 57.34, -16.446, -4.917 ) ) ):Angle() )
     holo[16]:SetAngles( holo[3]:LocalToWorldAngles( Angle( math.Clamp( grenadeAngle.p, -45, 35 ), math.Clamp( grenadeAngle.y, -35, 15 ), 0 ) ) )
 
-    local rocketAngle = holo[3]:WorldToLocalAngles( ( ( aimPos or Vector() ) - holo[17]:GetPos() ):Angle() )
+    local rocketAngle = holo[3]:WorldToLocalAngles( ( ( aimPos or Vector() ) - holo[17]:LocalToWorld( Vector( 39.264, 9.418, -2.055 ) ) ):Angle() )
     holo[17]:SetAngles( holo[3]:LocalToWorldAngles( Angle( math.Clamp( rocketAngle.p, -45, 35 ), math.Clamp( rocketAngle.y, -15, 35 ), 0 ) ) )
 
-    -- Animate the legs
-    legIK( entity, self.Legs["Right"].StepCurve, holo[5], holo[6],  holo[7],  holo[8],  holo[9],  29.998, 26.526, 48.312, 1 )
-    legIK( entity, self.Legs["Left"].StepCurve, holo[11], holo[12], holo[13], holo[14], holo[15], 29.998, 26.526, 48.312, 1 )
+    -- Legs
+    local rFootPos = self.Gaits["R"].FootData.Pos + self.Gaits["R"].FootData.Trace.HitNormal*12
+    local lFootPos = self.Gaits["L"].FootData.Pos + self.Gaits["L"].FootData.Trace.HitNormal*12
+
+    legIK( ent, rFootPos, holo[5], holo[6],  holo[7],  holo[8],  holo[9],  29.998, 26.526, 48.312, 1 )
+    legIK( ent, lFootPos, holo[11], holo[12], holo[13], holo[14], holo[15], 29.998, 26.526, 48.312, 1 )
 end )
 
 
-    --[[local torsoAngle = self.CSHolograms[1]:WorldToLocalAngles( LerpAngle( 0.05, self.CSHolograms[2]:GetAngles(), aimAngle ) )
-        self.CSHolograms[2]:SetAngles( self.CSHolograms[1]:LocalToWorldAngles( Angle( 0, torsoAngle.y, self.HeightDiff/3 ) ) )
-
-        local headAngle =self.CSHolograms[2]:WorldToLocalAngles( LerpAngle( 0.05, self.CSHolograms[3]:GetAngles(), aimAngle ) )
-        self.CSHolograms[3]:SetAngles( self.CSHolograms[2]:LocalToWorldAngles( Angle( math.Clamp( headAngle.p, -30, 15 ), 0, 0 ) ) )]]--

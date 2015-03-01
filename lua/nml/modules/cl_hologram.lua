@@ -3,6 +3,8 @@
 ---- by shadowscion
 ------------------------------------------------------
 
+local Addon = NML or {}
+
 local math   = math
 local table  = table
 local string = string
@@ -12,41 +14,41 @@ local render = render
 ---- CookieJar ( handles rendering of all holograms )
 ------------------------------------------------------
 
-NML.CookieJar = NML.CookieJar or {}
-local CookieJar = NML.CookieJar
+Addon.CookieJar = Addon.CookieJar or {}
+local cookieJar = Addon.CookieJar
 
-function NML.GetCookieCount()
-    for _, cookie in pairs( CookieJar ) do
-        print( table.Count( cookie ) )
-    end
-end
-
-local function BakeCookie( cookie, crumb )
-    if not CookieJar[cookie] then
-        CookieJar[cookie] = {}
+local function bakeCookie( cookie, crumb )
+    if not cookieJar[cookie] then
+        cookieJar[cookie] = {}
 
         cookie:CallOnRemove( "GarbageDay", function( self )
-            for _, crumb in pairs( CookieJar[self] ) do
+            for _, crumb in pairs( cookieJar[self] ) do
                 crumb = nil
             end
-            CookieJar[self] = nil
+            cookieJar[self] = nil
             collectgarbage( "collect" )
         end )
     end
 
-    table.insert( CookieJar[cookie], crumb )
+    table.insert( cookieJar[cookie], crumb )
 end
 
 hook.Remove( "PostDrawOpaqueRenderables", "DemCookiesIsDone" )
 hook.Add( "PostDrawOpaqueRenderables", "DemCookiesIsDone", function( depth, sky )
     if not sky then return end
-    for _, cookie in pairs( CookieJar ) do
+    for _, cookie in pairs( cookieJar ) do
         if not _.draw then continue end
         for _, crumb in pairs( cookie ) do
             crumb:Draw()
         end
     end
 end )
+
+function Addon.GetCookieCount()
+    for _, cookie in pairs( cookieJar ) do
+        print( table.Count( cookie ) )
+    end
+end
 
 --- Hologram Meta Object
 -- @section
@@ -86,7 +88,7 @@ local template = {
 -- @tparam CSEnt CSEnt It must be a valid CSEnt
 -- @return Hologram
 -- @usage local Temp = NML_CSHologram( SomeCSEnt )
-function NML_CSHologram( csent )
+function Addon.CSHologram( csent )
     if not IsValid( csent ) or type( csent ) ~= "CSEnt" then return end
 
     local self = table.Copy( template )
@@ -95,7 +97,7 @@ function NML_CSHologram( csent )
 
     setmetatable( self, Hologram )
 
-    BakeCookie( csent, self )
+    bakeCookie( csent, self )
 
     return self
 end
@@ -104,7 +106,7 @@ end
 -- @function NML_CSHolobase
 -- @return CSEnt
 -- @usage local Temp = NML_CSHolobase()
-function NML_CSHolobase()
+function Addon.CSHolobase()
     local self = ClientsideModel( "models/error.mdl" )
 
     self:SetPos( Vector() )

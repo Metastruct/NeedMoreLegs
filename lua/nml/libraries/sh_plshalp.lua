@@ -2,8 +2,10 @@
 ---- General Helper Functions
 ------------------------------------------------------
 
-NML.Helper = NML.Helper or {}
-local Helper = NML.Helper
+local Addon = NML or {}
+Addon.Helper = Addon.Helper or {}
+
+local Helper = Addon.Helper
 
 --- Math
 -- @section
@@ -21,6 +23,40 @@ local function notHuge( value )
     -math.huge < value[3] and value[3] < math.huge
 end
 Helper.NotHuge = notHuge
+
+--- Clamps vector A within minvec and maxvec
+-- @function clampVec
+-- @tparam Vector Value
+-- @tparam Vector Min
+-- @tparam Vector Max
+-- @param Vector
+-- @usage local V = clampVec( Vector( 50, 0, 0 ), Vector(), Vector( 100, 0, 0 ) )
+local function clampVec( v0, v1, v2 )
+    return Vector(
+        math.Clamp( v0.x, v1.x, v2.x ),
+        math.Clamp( v0.y, v1.y, v2.y ),
+        math.Clamp( v0.z, v1.z, v2.z )
+    )
+end
+Helper.ClampVec = clampVec
+
+--- Clamps angle A within minang and maxang
+-- @function clampAng
+-- @tparam Angle Value
+-- @tparam Angle Min
+-- @tparam Angle Max
+-- @param Angle
+-- @usage local A = clampAng( Angle( 50, 0, 0 ), Angle(), Angle( 100, 0, 0 ) )
+local function clampAng( a0, a1, a2 )
+    local ang =  Angle(
+        math.Clamp( a0.p, a1.p, a2.p ),
+        math.Clamp( a0.y, a1.y, a2.y ),
+        math.Clamp( a0.r, a1.r, a2.r )
+    )
+    ang:Normalize()
+    return ang
+end
+Helper.ClampAng = clampAng
 
 --- Returns sin( n ) in radians
 -- @function sin
@@ -161,7 +197,7 @@ Helper.ToLocalAxis = toLocalAxis
 -- @return Number Interpolation
 -- @usage local Interpolation = lerp( 0, 1, 0.5 )
 local function lerp( y0, y1, t )
-    return y0 + t*( y1 - y0 )
+    return y0 + ( y1 - y0 )*t
 end
 Helper.Lerp = lerp
 
@@ -256,6 +292,7 @@ Helper.TraceToVector = traceToVector
 -- @return TraceData
 -- @usage local Trace = podEyeTrace( LocalPlayer() )
 local function podEyeTrace( ply )
+    if not IsValid( ply ) then return {} end
     if not ply:InVehicle() then return {} end
 
     local pos = ply:GetShootPos()

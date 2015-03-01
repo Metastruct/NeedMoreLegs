@@ -25,64 +25,64 @@ if SERVER then
     end
 
     function ENT:Use( ply )
-        if not IsValid( self:GetBaseVehicle() ) then return end
-        if IsValid( self:GetBaseDriver() ) then return end
-        ply:EnterVehicle( self:GetBaseVehicle() )
+        if not IsValid( self:GetMechPilotSeat() ) then return end
+        if IsValid( self:GetMechPilot() ) then return end
+        ply:EnterVehicle( self:GetMechPilotSeat() )
     end
 
 else
 
     function ENT:Draw()
-       -- self:DrawModel()
+        self:DrawModel()
     end
 
 end
 
+function ENT:CanProperty( ply, property )
+    if property == "remover" then return true end
+    if property == "nml_context_menu" then return true end
+    return false
+end
+
+
+
 function ENT:SetupDataTables()
-    self:NetworkVar( "Entity", 0, "BaseVehicle" )
-    self:NetworkVar( "Entity", 1, "BaseDriver" )
-    self:NetworkVar( "Bool", 0, "ShowBones" )
-    self:NetworkVar( "Bool", 1, "DisableShading" )
-    self:NetworkVar( "Int", 0, "MechSkin" )
+    self:NetworkVar( "Entity", 0, "MechPilotSeat" )
+    self:NetworkVar( "Entity", 1, "MechPilot" )
+
+    self:NetworkVar( "Bool", 0, "MechToggleBones" )
+    self:NetworkVar( "Bool", 1, "MechToggleShading" )
+    self:NetworkVar( "Int", 0, "MechCurrentSkin" )
 end
 
 function ENT:Initialize()
     if SERVER then
-        self:SetModel( "models/hunter/blocks/cube2x2x2.mdl" )
-
         self:SetUseType( SIMPLE_USE )
-        self:PhysicsInitBox( Vector( -40, -40, -50 ), Vector( 40, 40, 50 ) )
-        self:SetCollisionBounds( Vector( -40, -40, -100 ), Vector( 40, 40, 75 ) )
+        self:SetModel( "models/Combine_Helicopter/helicopter_bomb01.mdl" )
 
-        local phys = self:GetPhysicsObject()
-        if IsValid( phys ) then
-            phys:SetMass( 5000 )
-            phys:EnableDrag( false )
-            phys:EnableGravity( false )
-            phys:EnableMotion( false )
-            phys:Wake()
-        end
+        local pod = ents.Create( "prop_vehicle_prisoner_pod" )
 
-        local vehicle = ents.Create( "prop_vehicle_prisoner_pod" )
+        pod:SetKeyValue( "limitview", 0 )
+        pod:SetPos( self:LocalToWorld( Vector( 0, 0, 25 ) ) )
+        pod:SetAngles( self:LocalToWorldAngles( Angle( 0, -90, 0 ) ) )
+        pod:SetModel( "models/nova/jeep_seat.mdl" )
+        pod:SetParent( self )
+        pod:SetVehicleEntryAnim( false )
+        pod:Spawn()
+        pod:Activate()
 
-        vehicle:SetKeyValue( "limitview", "0" )
-        vehicle:SetPos( self:LocalToWorld( Vector( 0, 0, 25 ) ) )
-        vehicle:SetAngles( self:GetAngles() )
-        vehicle:SetModel( "models/nova/jeep_seat.mdl" )
-        vehicle:SetParent( self )
-        vehicle:Spawn()
-        vehicle:Activate()
 
-        local phys = vehicle:GetPhysicsObject()
+
+        local phys = pod:GetPhysicsObject()
         if IsValid( phys ) then
             phys:EnableCollisions( false )
             phys:Wake()
         end
 
-        self:SetBaseVehicle( vehicle )
+        self:SetMechPilotSeat( pod )
     end
 
-    self.Mech = NML_GetMechType( "gtb22" )
+    self.Mech = NML.GetMechType( "type_gtb22", "nml_mechtypes" )
     if not self.Mech then return end
     if not self.Mech.Initialize then return end
 
