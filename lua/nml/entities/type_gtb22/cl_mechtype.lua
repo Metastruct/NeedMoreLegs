@@ -125,6 +125,13 @@ Mech:SetInitialize( function( self, ent )
     self.Height = 300
     self.Crouch = 0
     self.Seed = CurTime() + math.random( -180, 180 )
+
+    self.VelMul = 15
+    self.PZ = 0
+    self.WalkDelta = 0
+    self.OldWalkCycle = 0
+
+    self:AddGaitDebugBar( 64, 64, 96, 96*4 )
 end )
 
 ------------------------------------------------------
@@ -148,6 +155,9 @@ local function legIK( ent, pos, hip, fem, tib, tars, foot, length0, length1, len
     tib:SetAngles( fem:LocalToWorldAngles( Angle( atan( -laxis.z, laxis.x ) + acos( ( dist^2 + length1^2 - length2^2 )/( 2*length1*dist ) ) - 90, 0, 0 ) ) )
     tars:SetAngles( tib:LocalToWorldAngles( Angle( acos( ( length2^2 + length1^2 - dist^2 )/( 2*length1*length2 ) ) + 180, 0, 0 ) ) )
 
+    --local atn = laxisAngle.p
+    --local ang = ( math.abs( atn ) > 150 and math.abs( atn ) < 180 ) and 180 or ( atn < 0 ) and atn or 180
+    --foot:SetAngles( Angle( ang + 45, ent:GetAngles().y, 0 ) )
     foot:SetAngles( Angle( 0, ent:GetAngles().y, 0 ) )
 end
 
@@ -180,14 +190,16 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     self.WalkVel = lerp( self.WalkVel, vel:Length(), 0.1 )
     local multiplier = self.WalkVel/1000
 
-    self.WalkCycle = self.WalkCycle + ( 0.05 + 0.03*multiplier )*dt*30
+
+    self.WalkCycle = self.WalkCycle + ( 0.05 + 0.03*multiplier )*dt*self.VelMul
+    self.WalkDelta = self.WalkCycle - self.OldWalkCycle
+    self.OldWalkCycle = self.WalkCycle
+
     local gaitSize = math.Clamp( 0.4 + 0.03*multiplier, 0, 0.9 )
 
     self:SetGaitStart( "L", 0, gaitSize )
     self:SetGaitStart( "R", 0.5, gaitSize )
     self:RunGaitSequence()
-
-    local diff = self:GetGaitDiff( "R", "L" )
 
     -- Animate holograms
     local holo = self.CSHolograms
@@ -199,8 +211,15 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     self.Crouch = lerp( self.Crouch, ctrl*20, 0.15 )
 
     -- Pelvis
-    holo[1]:SetPos( ent:LocalToWorld( Vector( 0, 0, math.abs( diff/3 ) - ctime - self.Crouch ) ) )
-    holo[1]:SetAngles( ent:LocalToWorldAngles( Angle( -stime + self.Crouch, 0, -diff/3 ) ) )
+    --local ppos = ent:GetPos()
+    --ppos.z = ( self.Gaits["R"].FootData.Pos.z + self.Gaits["L"].FootData.Pos.z )/2 + 90
+    --holo[1]:SetPos( ppos )
+
+    local diff = self.Gaits["R"].FootData.Height - self.Gaits["L"].FootData.Height
+    --local diff = -sin( self.WalkCycle*360 )*25
+
+    holo[1]:SetPos( ent:LocalToWorld( Vector( 0, 0, math.abs( diff/2 ) - ctime - self.Crouch ) ) )
+    holo[1]:SetAngles( ent:LocalToWorldAngles( Angle( -stime + self.Crouch, 0, -diff/3*0 ) ) )
 
     -- Torso
     holo[4]:SetAngles( holo[1]:LocalToWorldAngles( Angle( 0, 0, -math.abs( diff/4 ) - ctime + 10 ) ) )
@@ -231,5 +250,3 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     legIK( ent, rFootPos, holo[5], holo[6],  holo[7],  holo[8],  holo[9],  29.998, 26.526, 48.312, 1 )
     legIK( ent, lFootPos, holo[11], holo[12], holo[13], holo[14], holo[15], 29.998, 26.526, 48.312, 1 )
 end )
-
-

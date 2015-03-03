@@ -54,8 +54,8 @@ local function calcView( ply, origin, angles, fov )
     return view
 end
 
-hook.Remove( "CalcView", "ThirdPersonViewTest" )
-hook.Add( "CalcView", "ThirdPersonViewTest", calcView )
+hook.Remove( "CalcView", "NML.CalcView" )
+hook.Add( "CalcView", "NML.CalcView", calcView )
 
 ----------------------------------------------------------------------------------
 
@@ -64,8 +64,8 @@ local function drawPlayer( ply )
      return true
 end
 
-hook.Remove( "ShouldDrawLocalPlayer", "ThirdPersonViewTest" )
-hook.Add( "ShouldDrawLocalPlayer", "ThirdPersonViewTest", drawPlayer )
+hook.Remove( "ShouldDrawLocalPlayer", "NML.ShouldDrawLocalPlayer" )
+hook.Add( "ShouldDrawLocalPlayer", "NML.ShouldDrawLocalPlayer", drawPlayer )
 
 ----------------------------------------------------------------------------------
 
@@ -79,7 +79,7 @@ local function doZoom( ply, bind, pressed )
     if key == "MWHEELUP" then zoom = math.Clamp( zoom + 50, 150, 1000 ) end
 end
 
-hook.Remove( "PlayerBindPress", "ThirdPersonViewTest" )
-hook.Add( "PlayerBindPress", "ThirdPersonViewTest", doZoom )
+hook.Remove( "PlayerBindPress", "NML.PlayerBindPress" )
+hook.Add( "PlayerBindPress", "NML.PlayerBindPress", doZoom )
 
 ----------------------------------------------------------------------------------

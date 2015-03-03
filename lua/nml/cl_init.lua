@@ -1,7 +1,10 @@
 
 -- Load Libraries and Modules
+include( "vgui/cl_spawnmenu.lua" )
 include( "vgui/sh_contextmenu.lua" )
+
 include( "libraries/sh_plshalp.lua" )
+
 include( "modules/cl_hologram.lua" )
 include( "modules/sh_mech.lua" )
 

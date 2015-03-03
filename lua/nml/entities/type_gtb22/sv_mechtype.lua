@@ -47,7 +47,7 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     -- Setup Inputs
     local aimPos = Vector()
     local w, a, s, d = 0, 0, 0, 0
-    local ctrl, space, shift = 0, 0, 0
+    local ctrl, alt, space, shift = 0, 0, 0, 0
 
     if IsValid( ply ) then
         w = ply:KeyDown( IN_FORWARD ) and 1 or 0
@@ -56,6 +56,7 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
         d = ply:KeyDown( IN_MOVERIGHT ) and 1 or 0
 
         ctrl = ply:KeyDown( IN_DUCK ) and 1 or 0
+        alt = ply:KeyDown( IN_WALK ) and 0 or 1
 
         aimPos = podEyeTrace( ply ).HitPos
     else
@@ -71,14 +72,14 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     if trace.Hit then
         local height = trace.StartPos:Distance( trace.HitPos )
 
-        local forceu = Vector( 0, 0, 100 - height )*5 - divVA( phys:GetVelocity(), Vector( 20, 20, 5 ) )
-        local forcef = ent:GetForward()*( ( 15 - ctrl*7.5 )*self.WalkSpeed )
-        local forcer = ent:GetRight()*( ( 7.5 - ctrl*3.75 )*self.StrafeSpeed )
+        local forceu = Vector( 0, 0, 100 - height )*5 - divVA( phys:GetVelocity(), Vector( 20, 20, 1 ) )
+        local forcef = ent:GetForward()*( ( 15 - ctrl*7.5 )*self.WalkSpeed/1.5 )
+        local forcer = ent:GetRight()*( ( 7.5 - ctrl*3.75 )*self.StrafeSpeed/1.5 )
 
         phys:EnableGravity( false )
         phys:ApplyForceCenter( ( forceu + forcef + forcer )*phys:GetMass() )
 
-        local turnSpd = ( ( w + a + s + d ) ~= 0 and 1 or 1 )*phys:GetVelocity():Length()*2
+        local turnSpd = ( ( w + a + s + d ) ~= 0 and 1 or 1 )*phys:GetVelocity():Length()*2*alt
         local turnTo = math.ApproachAngle( phys:GetAngles().y, ( aimPos - phys:GetPos() ):Angle().y, dt*turnSpd )
 
         ezAngForce( ent, ent:WorldToLocalAngles( Angle( 0, turnTo, 0 ) )*200, 20 )

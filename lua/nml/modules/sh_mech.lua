@@ -76,6 +76,8 @@ function Mech:SetInitialize( setFunc )
                 self.CSHolobase:Remove()
                 self.CSHolograms = nil
 
+                Addon.HUD[self.UniqueID] = nil
+
                 timer.Simple( 0.5, function()
                     if not IsValid( garbage ) then return end
                     if not self.Initialize then return end
@@ -191,186 +193,280 @@ end
 --- Clientside functions
 -- @section
 
-if CLIENT then
+if not CLIENT then return end
 
-    --- Loads a model from a table of values
-    -- @function Mech:LoadModelFromData
-    -- @tparam Table Data { Position=Vector(), Angle=Angle(), Model="String", Material="String" }
-    -- @usage Mech:LoadModelFromData( schematic )
-    function Mech:LoadModelFromData( data )
-        if not self.Entity then return end
-        if not self.CSHolobase then return end
-        if not self.CSHolograms then return end
+--- Loads a model from a table of values
+-- @function Mech:LoadModelFromData
+-- @tparam Table Data { Position=Vector(), Angle=Angle(), Model="String", Material="String" }
+-- @usage Mech:LoadModelFromData( schematic )
+function Mech:LoadModelFromData( data )
+    if not self.Entity then return end
+    if not self.CSHolobase then return end
+    if not self.CSHolograms then return end
 
-        for i, info in ipairs( data ) do
-            local part = Addon.CSHologram( self.CSHolobase )
-            local partParent = self.CSHolograms[info.Parent] and self.CSHolograms[info.Parent] or self.Entity
+    for i, info in ipairs( data ) do
+        local part = Addon.CSHologram( self.CSHolobase )
+        local partParent = self.CSHolograms[info.Parent] and self.CSHolograms[info.Parent] or self.Entity
 
-            part:SetParent( partParent )
-            part:SetPos( partParent:LocalToWorld( info.Position or Vector() ) )
-            part:SetAngles( partParent:LocalToWorldAngles( info.Angle or Angle() ) )
-            part:SetModel( info.Model or "" )
-            part:SetMaterial( info.Material or nil )
+        part:SetParent( partParent )
+        part:SetPos( partParent:LocalToWorld( info.Position or Vector() ) )
+        part:SetAngles( partParent:LocalToWorldAngles( info.Angle or Angle() ) )
+        part:SetModel( info.Model or "" )
+        part:SetMaterial( info.Material or nil )
 
-            -- Update
-            part:UpdatePos()
-            part:UpdateAngles()
+        -- Update
+        part:UpdatePos()
+        part:UpdateAngles()
 
-            self.CSHolograms[i] = part
-        end
-
-        self.CSHolobase.draw = true
+        self.CSHolograms[i] = part
     end
 
-    --- Gait System - by Metamist
-    -- @section
+    self.CSHolobase.draw = true
+end
 
-    local clampVec = Addon.Helper.ClampVec
-    local bezierCurve = Addon.Helper.Bezier
-    local traceDirection = Addon.Helper.TraceDirection
+--- Gait System - by Metamist
+-- @section
 
-    function Mech:CreateGait( id, footOffset, legLength )
-        if not self.Gaits then
-            self.Gaits     = {}
-            self.WalkCycle = 0
-            self.WalkVel   = 0
-            self.GaitCount = 0
-        end
+local clampVec = Addon.Helper.ClampVec
+local bezierCurve = Addon.Helper.Bezier
+local traceDirection = Addon.Helper.TraceDirection
 
-        self.Gaits[id] = {
-            FootData = {
-                Offset = footOffset or Vector(),
-                LegLength = legLength or 0,
-                Prev = self.Entity:LocalToWorld( footOffset or Vector() ),
-                Dest = self.Entity:LocalToWorld( footOffset or Vector() ),
-                Pos = self.Entity:LocalToWorld( footOffset or Vector() ),
-                IsMoving = false,
-                ShouldMove = false,
-            }
+function Mech:CreateGait( id, footOffset, legLength )
+    if not self.Gaits then
+        self.Gaits     = {}
+        self.WalkCycle = 0
+        self.WalkVel   = 0
+        self.GaitCount = 0
+    end
+
+    self.Gaits[id] = {
+        FootData = {
+            Offset = footOffset or Vector(),
+            LegLength = legLength or 0,
+            Prev = self.Entity:LocalToWorld( footOffset or Vector() ),
+            Dest = self.Entity:LocalToWorld( footOffset or Vector() ),
+            Pos = self.Entity:LocalToWorld( footOffset or Vector() ),
+            IsMoving = false,
+            ShouldMove = false,
+            Height = 0,
         }
-        self.GaitCount = self.GaitCount + 1
-    end
+    }
+    self.GaitCount = self.GaitCount + 1
+end
 
-    function Mech:SetGaitStart( id, start, len )
-        if not self.Gaits or not self.Gaits[id] then return end
-        self.Gaits[id].Start = start
-        self.Gaits[id].Stop = start + len
-    end
+function Mech:SetGaitStart( id, start, len )
+    if not self.Gaits or not self.Gaits[id] then return end
+    self.Gaits[id].Start = start
+    self.Gaits[id].Stop = start + len
+end
 
-    function Mech:RunGaitSequence()
-        if not self.Gaits then return end
+function Mech:RunGaitSequence()
+    if not self.Gaits then return end
 
-        for _, Gait in pairs( self.Gaits ) do
-            local gstart = Gait.Start
-            local gstop = Gait.Stop
-            local gfract = 0
-            local gmove = false
+    for _, Gait in pairs( self.Gaits ) do
+        local gstart = Gait.Start
+        local gstop = Gait.Stop
+        local gfract = 0
+        local gmove = false
 
-            if self.WalkCycle >= gstart and self.WalkCycle <= gstop then
+        if self.WalkCycle >= gstart and self.WalkCycle <= gstop then
+            gfract = ( self.WalkCycle - gstart )/( gstop - gstart )
+            gmove = true
+        end
+
+        if gstart < 0 then
+            if self.WalkCycle >= math.abs( gstart ) and self.WalkCycle <= 1 then
                 gfract = ( self.WalkCycle - gstart )/( gstop - gstart )
                 gmove = true
             end
-
-            if gstart < 0 then
-                if self.WalkCycle >= math.abs( gstart ) and self.WalkCycle <= 1 then
-                    gfract = ( self.WalkCycle - gstart )/( gstop - gstart )
-                    gmove = true
-                end
-            elseif gstop > 1 then
-                if self.WalkCycle + 1 >= gstart and self.WalkCycle + 1 <= gstop then
-                    gfract = ( self.WalkCycle + 1 - gstart )/( gstop - gstart )
-                    gmove = true
-                end
-            end
-
-            if Gait.FootData then
-                local Foot = Gait.FootData
-
-                local traceStart = self.Entity:LocalToWorld( Foot.Offset ) + self.Entity:GetVelocity()/8
-                -- local trace = util.TraceLine( {
-                --     start = traceStart,
-                --     endpos = traceStart + Vector( 0, 0, -1 )*Foot.LegLength*2,
-                --     filter = nil,
-                --     mask = MASK_SOLID_BRUSHONLY,
-                -- } )
-
-                local trace = util.TraceHull( {
-                    start = traceStart,
-                    endpos = traceStart + Vector( 0, 0, -1 )*Foot.LegLength*2,
-                    filter = nil,
-                    mask = MASK_SOLID_BRUSHONLY,
-                    mins = Vector( -15, -15, 0 ),
-                    maxs = Vector( 15, 15, 0 ),
-                } )
-
-                Foot.Trace = trace
-
-                if gmove then
-                    Foot.Dest = trace.HitPos
-
-                    if not Foot.IsMoving then
-                        Foot.Prev = Foot.Pos
-                        Foot.Prev.Z = trace.HitPos.z
-
-                        if Foot.Pos:Distance( trace.HitPos ) >= 4 then
-                            local dot = 0
-                            if trace.Hit then
-                                dot = 1 - Vector( 0, 0, 1 ):Dot( trace.HitNormal )
-                            end
-
-                            local dist = trace.StartPos:Distance( trace.HitPos )
-                            local vel = self.Entity:GetVelocity()
-                                vel.z = 0
-
-                            if  dist <= Foot.LegLength + dot*100*math.Clamp( vel:Length()/100, 0, Foot.LegLength/2 ) then
-                                Foot.ShouldMove = true
-                            end
-                        end
-                    end
-
-                    if Foot.ShouldMove then
-                        local prev = Foot.Prev
-                        local dest = trace.HitPos
-                        local mid = ( dest + prev )/2 + Vector( 0, 0, math.Clamp( prev:Distance( dest )/4, 0, self.Height ) )
-
-                        local bezPos = bezierCurve( prev, mid, dest, gfract )
-                        Foot.Pos = bezPos
-
-                        Foot.Height = bezPos.z - dest.z
-                        Foot.LastMove = true
-                    else
-                        Foot.Height = 0
-                    end
-                else
-                    if Foot.LastMove then
-                        Foot.Pos = Foot.Dest
-                        Foot.LastMove = false
-
-                        -- play sounds
-                    end
-                    Foot.ShouldMove = false
-                    Foot.Height = 0
-                end
-
-                Foot.IsMoving = gmove and Foot.ShouldMove
+        elseif gstop > 1 then
+            if self.WalkCycle + 1 >= gstart and self.WalkCycle + 1 <= gstop then
+                gfract = ( self.WalkCycle + 1 - gstart )/( gstop - gstart )
+                gmove = true
             end
         end
 
-        if self.WalkCycle > 1 then self.WalkCycle = 0 end
+        if Gait.FootData then
+            local Foot = Gait.FootData
+
+            local vel = self.Entity:GetVelocity()/3
+            --vel.z = 0
+
+            local traceStart = self.Entity:LocalToWorld( Foot.Offset ) + vel
+            local trace = util.TraceLine( {
+                start = traceStart,
+                endpos = traceStart + Vector( 0, 0, -1 )*Foot.LegLength*2,
+                filter = nil,
+                mask = MASK_SOLID_BRUSHONLY,
+            } )
+
+            -- local trace = util.TraceHull( {
+            --     start = traceStart,
+            --     endpos = traceStart + Vector( 0, 0, -1 )*Foot.LegLength*2,
+            --     filter = nil,
+            --     mask = MASK_SOLID_BRUSHONLY,
+            --     mins = Vector( -15, -15, 0 ),
+            --     maxs = Vector( 15, 15, 0 ),
+            -- } )
+
+            Foot.Trace = trace
+
+            if gmove then
+                Foot.Dest = trace.HitPos
+
+                if not Foot.IsMoving then
+                    Foot.Prev = Foot.Pos
+                    Foot.Prev.Z = trace.HitPos.z
+
+                    if Foot.Pos:Distance( trace.HitPos ) >= 4 then
+                        local dot = 0
+                        if trace.Hit then
+                            dot = 1 - Vector( 0, 0, 1 ):Dot( trace.HitNormal )
+                        end
+
+                        local dist = trace.StartPos:Distance( trace.HitPos )
+                        local vel = self.Entity:GetVelocity()
+                            vel.z = 0
+
+                        local thresh = Foot.LegLength + dot*100*math.Clamp( vel:Length()/100, 0, Foot.LegLength/2 )
+                        if  dist <= thresh then
+                            Foot.ShouldMove = true
+                        end
+                    end
+                end
+
+                if Foot.ShouldMove then
+                    local prev = Foot.Prev
+                    local dest = trace.HitPos
+                    local mid = ( dest + prev )/2 + Vector( 0, 0, math.Clamp( prev:Distance( dest )/4, 0, self.Height ) )
+
+                    local bezPos = bezierCurve( prev, mid, dest, gfract )
+                    Foot.Pos = bezPos
+
+                    Foot.Height = bezPos.z - dest.z
+                    Foot.LastMove = true
+                else
+                    Foot.Height = 0
+                end
+            else
+                if Foot.LastMove then
+                    Foot.Pos = Foot.Dest
+                    Foot.LastMove = false
+
+                    -- play sounds
+                end
+                Foot.ShouldMove = false
+                Foot.Height = 0
+            end
+
+            Foot.IsMoving = gmove and Foot.ShouldMove
+        end
     end
 
-    --- Returns the difference between the height of two legs
-    -- @function Mech:GetGaitDiff
-    -- @tparam Leg LegA
-    -- @tparam Leg LegB
-    -- @return Number Diff
-    -- @usage local HeightDiff = Mech:GetGaitDiff( "Right", "Left" )
-    function Mech:GetGaitDiff( legA, legB )
-        if not self.Gaits or not self.Gaits[legA] or not self.Gaits[legB] then return 0 end
-        local a = self.Gaits[legA].FootData
-        local b = self.Gaits[legB].FootData
-        return a.Height - b.Height
-        --return ( ( a.Pos - a.Trace.HitPos ) - ( b.Pos - b.Trace.HitPos ) ).z
-    end
+    if self.WalkCycle > 1 then self.WalkCycle = 0 end
+end
 
+--- Returns the difference between the height of two legs
+-- @function Mech:GetGaitDiff
+-- @tparam Leg LegA
+-- @tparam Leg LegB
+-- @return Number Diff
+-- @usage local HeightDiff = Mech:GetGaitDiff( "Right", "Left" )
+function Mech:GetGaitDiff( legA, legB )
+    if not self.Gaits or not self.Gaits[legA] or not self.Gaits[legB] then return 0 end
+    local a = self.Gaits[legA].FootData
+    local b = self.Gaits[legB].FootData
+    --return ( a.Pos - b.Pos ).z
+    return a.Height - b.Height
+    --return ( ( a.Pos - a.Trace.HitPos ) - ( b.Pos - b.Trace.HitPos ) ).z
+end
+
+--- HUD Functions
+-- @section
+
+local gdbg_colorA = Color( 255, 255, 255, 255 )
+local gdbg_colorB = Color( 255, 255, 255, 90 )
+local gdbg_colorC = Color( 0, 0, 0, 255 )
+local gdbg_colorD = Color( 255, 255, 0, 255 )
+local gdbg_colorE = Color( 0, 125, 0, 50 )
+
+local function drawFilledRect( posx, posy, sizex, sizey, color, text )
+    surface.SetDrawColor( color )
+    surface.DrawRect( posx, posy, sizex, sizey )
+    surface.SetDrawColor( gdbg_colorC )
+    surface.DrawOutlinedRect( posx, posy, sizex, sizey )
+
+    if text then
+        surface.SetTextColor( gdbg_colorC )
+        surface.SetFont( "Default" )
+        surface.SetTextPos( posx + sizex/2, posy + sizey/2 - 6 )
+        surface.DrawText( text )
+    end
+end
+Addon.DrawFilledRect = drawFilledRect
+
+--- Adds a debug bar for visualizing the gait timing
+-- @function Mech:AddGaitDebugBar
+-- @tparam Number PosX
+-- @tparam Number PosY
+-- @tparam Number Height
+-- @tparam Number Width
+-- @usage Mech:AddGaitDebugBar( 64, 64, 96, 96*4 )
+function Mech:AddGaitDebugBar( posx, posy, height, width )
+    self:AddHudElement(
+        function()
+            if not self.Gaits then return false end
+            return true
+        end,
+
+        function( ply, h, w )
+            -- Background
+            drawFilledRect( posx, h - height - posy, width, height, gdbg_colorE )
+
+            -- Gaits
+            local sep = height/table.Count( self.Gaits )
+            local cnt = -1
+
+            for _, gait in pairs( self.Gaits ) do
+                cnt = cnt + 1
+
+                local gaitStart = ( gait.Start or 0 ) % 1
+                local gaitStop = ( gait.Stop or 0 ) % 1
+
+                if gaitStart > gaitStop then
+                    local gpx = posx + width*gaitStart
+                    local gpy = h - height - posy + sep*cnt
+                    local sx = width - gpx + posx
+
+                    local color = ( self.WalkCycle >= gaitStart or self.WalkCycle <= gaitStop ) and gdbg_colorA or gdbg_colorB
+                    drawFilledRect( gpx, gpy, sx, sep, color, _ )
+                    drawFilledRect( posx, gpy, width*gaitStop, sep, color, _ )
+                else
+                    local gpx = posx + width*gaitStart
+                    local gpy = h - height - posy + sep*cnt
+                    local sx = width*gaitStop - width*gaitStart
+
+                    drawFilledRect( gpx, gpy, sx, sep, ( self.WalkCycle >= gaitStart and self.WalkCycle <= gaitStop ) and gdbg_colorA or gdbg_colorB, _ )
+                end
+            end
+
+            -- Walkcycle Bar
+            drawFilledRect( posx + width*self.WalkCycle, h - height - posy, 5, height, gdbg_colorD )
+        end
+    )
+end
+
+--- Adds a hud element to the mech
+-- @function Mech:AddHudElement
+-- @tparam Function Condition If false, the hud element will not be drawn ( args: ply )
+-- @tparam Function Callback ( args: ply, scrh, scrw )
+-- @usage Mech:AddGaitDebugBar( function() return true end, function() surface.DrawRect( 0, 0, 64, 64 ) end )
+function Mech:AddHudElement( cnd, cbk )
+    Addon.HUD = Addon.HUD or {}
+    Addon.HUD[self.UniqueID] = Addon.HUD[self.UniqueID] or {}
+
+    table.insert( Addon.HUD[self.UniqueID], {
+        cnd = cnd,
+        cbk = cbk,
+    } )
 end

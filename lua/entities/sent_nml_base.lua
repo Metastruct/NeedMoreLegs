@@ -1,60 +1,53 @@
+----------------------------------------------------------------------------------
+---- NML Base Entity - by shadowscion
+----------------------------------------------------------------------------------
+
 AddCSLuaFile()
 
-ENT.Base        = "base_anim"
-ENT.Type        = "anim"
-ENT.PrintName   = "base_nml"
-ENT.Author      = "shadowscion"
-ENT.Category    = "NeedMoreLegs"
+ENT.Base = "base_anim"
+ENT.Type = "anim"
+ENT.Author = "shadowscion"
+ENT.PrintName = "base_nml"
 
-ENT.Spawnable       = true
-ENT.AdminSpawnable  = true
+ENT.Spawnable = true
+ENT.AdminSpawnable = true
 
-if SERVER then
-
-    function ENT:SpawnFunction( ply, trace )
-        if not trace.Hit then return end
-
-        local sent = ents.Create( "sent_nml_base" )
-
-        sent:SetPos( trace.HitPos + Vector( 0, 0, 125 ) )
-        sent:SetAngles( Angle( 0, 0, 0 ) )
-        sent:Spawn()
-        sent:Activate()
-
-        return sent
-    end
-
-    function ENT:Use( ply )
-        if not IsValid( self:GetMechPilotSeat() ) then return end
-        if IsValid( self:GetMechPilot() ) then return end
-        ply:EnterVehicle( self:GetMechPilotSeat() )
-    end
-
-else
-
-    function ENT:Draw()
-        self:DrawModel()
-    end
-
-end
-
-function ENT:CanProperty( ply, property )
-    if property == "remover" then return true end
-    if property == "nml_context_menu" then return true end
-    return false
-end
-
-
+----------------------------------------------------------------------------------
+---- DTVars
 
 function ENT:SetupDataTables()
+    self:NetworkVar( "String", 0, "SpawnType" )
+
     self:NetworkVar( "Entity", 0, "MechPilotSeat" )
     self:NetworkVar( "Entity", 1, "MechPilot" )
-
     self:NetworkVar( "Bool", 0, "MechToggleBones" )
     self:NetworkVar( "Bool", 1, "MechToggleShading" )
     self:NetworkVar( "Int", 0, "MechCurrentSkin" )
 end
 
+----------------------------------------------------------------------------------
+---- Spawn Function
+
+function ENT:SpawnFunction( ply, trace )
+    if not trace.Hit then return end
+
+    local type = ply:GetInfo( "nml_spawntype" )
+    local types = list.Get( "nml_mechtypes" )
+    if not types[type] then return end
+
+    local sent = ents.Create( "sent_nml_base" )
+
+    sent:SetSpawnType( type )
+    sent:SetPos( trace.HitPos + Vector( 0, 0, 125 ) )
+    sent:SetAngles( Angle( 0, 0, 0 ) )
+    sent:Spawn()
+    sent:Activate()
+
+    return sent
+end
+
+----------------------------------------------------------------------------------
+---- Initialize
 function ENT:Initialize()
     if SERVER then
         self:SetUseType( SIMPLE_USE )
@@ -71,8 +64,6 @@ function ENT:Initialize()
         pod:Spawn()
         pod:Activate()
 
-
-
         local phys = pod:GetPhysicsObject()
         if IsValid( phys ) then
             phys:EnableCollisions( false )
@@ -82,12 +73,36 @@ function ENT:Initialize()
         self:SetMechPilotSeat( pod )
     end
 
-    self.Mech = NML.GetMechType( "type_gtb22", "nml_mechtypes" )
-    if not self.Mech then return end
-    if not self.Mech.Initialize then return end
+    self.Mech = NML.GetMechType( self:GetSpawnType(), "nml_mechtypes" )
+    if not self.Mech then self:Remove() return end
+    if not self.Mech.Initialize then self:Remove() return end
 
     timer.Simple( 0, function()
         self.Mech:SetEntity( self )
         self.Mech:Initialize()
     end )
 end
+
+----------------------------------------------------------------------------------
+
+function ENT:CanProperty( ply, property )
+    if property == "remover" then return true end
+    if property == "nml_context_menu" then return true end
+    return false
+end
+
+----------------------------------------------------------------------------------
+
+function ENT:Use( ply )
+    if not IsValid( self:GetMechPilotSeat() ) then return end
+    if IsValid( self:GetMechPilot() ) then return end
+    ply:EnterVehicle( self:GetMechPilotSeat() )
+end
+
+----------------------------------------------------------------------------------
+
+function ENT:Draw()
+    --self:DrawModel()
+end
+
+----------------------------------------------------------------------------------

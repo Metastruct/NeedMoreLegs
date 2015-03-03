@@ -11,6 +11,7 @@ local string = string
 
 local Helper = Addon.Helper
 local lerp = Helper.Lerp
+
 ------------------------------------------------------
 
 local Mech = Addon.CreateMechType( "base_biped", "nml_mechtypes" )
@@ -30,6 +31,7 @@ local schematic = {
 
 ------------------------------------------------------
 
+
 Mech:SetInitialize( function( self, ent )
     self:LoadModelFromData( schematic )
     self:CreateGait( "L", Vector( 0, 20, 0 ), 100 )
@@ -43,7 +45,7 @@ end )
 
 ------------------------------------------------------
 
-Mech:SetThink( function( self, ent, dt )
+Mech:SetThink( function( self, ent, veh, ply, dt )
     local vel = ent:GetVelocity()
         vel.z = 0
 

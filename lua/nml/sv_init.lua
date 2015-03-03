@@ -1,13 +1,18 @@
 
 -- Add Client Libraries and Modules
+AddCSLuaFile( "vgui/cl_spawnmenu.lua" )
 AddCSLuaFile( "vgui/sh_contextmenu.lua" )
+
 AddCSLuaFile( "libraries/sh_plshalp.lua" )
+
 AddCSLuaFile( "modules/cl_hologram.lua" )
 AddCSLuaFile( "modules/sh_mech.lua" )
 
 -- Load Libraries and Modules
 include( "vgui/sh_contextmenu.lua" )
+
 include( "libraries/sh_plshalp.lua" )
+
 include( "modules/sh_mech.lua" )
 
 -- Add and Load Mechtype Files
