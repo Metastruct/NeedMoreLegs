@@ -1,5 +1,5 @@
 ------------------------------------------------------
----- GTB-22 - Serverside File
+---- Base Octopod Type - Serverside File
 ---- by shadowscion
 ------------------------------------------------------
 
@@ -21,14 +21,14 @@ local traceDirection = Helper.TraceDirection
 
 ------------------------------------------------------
 
-local Mech = Addon.CreateMechType( "type_gtb22", "nml_mechtypes" )
+local Mech = Addon.CreateMechType( "base_octopod", "nml_mechtypes" )
 
-Mech:SetPhysicsBox(
-    Vector( -40, -40, -50 ),
-    Vector( 40, 40, 50 ),
-    Vector( -40, -40, -100 ),
-    Vector( 40, 40, 75 )
- )
+-- Mech:SetPhysicsBox(
+--     Vector( -40, -40, -50 ),
+--     Vector( 40, 40, 50 ),
+--     Vector( -40, -40, -100 ),
+--     Vector( 40, 40, 75 )
+--  )
 
 ------------------------------------------------------
 
@@ -58,7 +58,6 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
         ctrl = ply:KeyDown( IN_DUCK ) and 1 or 0
         shift = ply:KeyDown( IN_SPEED ) and 1 or 0
         alt = ply:KeyDown( IN_WALK ) and 0 or 1
-        space = ply:KeyDown( IN_JUMP ) and 1 or 0
 
         aimPos = podEyeTrace( ply ).HitPos
     else
@@ -74,14 +73,14 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     if trace.Hit then
         local height = trace.StartPos:Distance( trace.HitPos )
 
-        local forceu = Vector( 0, 0, 100 - height )*5 - divVA( phys:GetVelocity(), Vector( 20, 20, 1 ) )
-        local forcef = ent:GetForward()*( ( 15 - ctrl*7.5 + shift*7.5 )*self.WalkSpeed/1.5 )
-        local forcer = ent:GetRight()*( ( 7.5 - ctrl*3.75 )*self.StrafeSpeed/1.5 )
+        local forceu = Vector( 0, 0, 50 - height )*5 - divVA( phys:GetVelocity(), Vector( 20, 20, 1 ) )
+        local forcef = ent:GetForward()*( ( 15 - ctrl*7.5 + shift*7.5 )*alt*self.WalkSpeed )
+        local forcer = ent:GetRight()*( ( 15 - ctrl*7.5 + shift*7.5 )*alt*self.StrafeSpeed )
 
         phys:EnableGravity( false )
         phys:ApplyForceCenter( ( forceu + forcef + forcer )*phys:GetMass() )
 
-        local turnSpd = ( ( w + a + s + d ) ~= 0 and 1 or 1 )*phys:GetVelocity():Length()*2*alt
+        local turnSpd = alt*1000
         local turnTo = math.ApproachAngle( phys:GetAngles().y, ( aimPos - phys:GetPos() ):Angle().y, dt*turnSpd )
 
         ezAngForce( ent, ent:WorldToLocalAngles( Angle( 0, turnTo, 0 ) )*200, 20 )

@@ -22,7 +22,7 @@ function ENT:SetupDataTables()
     self:NetworkVar( "Entity", 1, "MechPilot" )
     self:NetworkVar( "Bool", 0, "MechToggleBones" )
     self:NetworkVar( "Bool", 1, "MechToggleShading" )
-    self:NetworkVar( "Int", 0, "MechCurrentSkin" )
+    self:NetworkVar( "Int", 0, "MechSkin" )
 end
 
 ----------------------------------------------------------------------------------
@@ -48,6 +48,7 @@ end
 
 ----------------------------------------------------------------------------------
 ---- Initialize
+
 function ENT:Initialize()
     if SERVER then
         self:SetUseType( SIMPLE_USE )
@@ -71,6 +72,7 @@ function ENT:Initialize()
         end
 
         self:SetMechPilotSeat( pod )
+        self:SetMechSkin( 2 )
     end
 
     self.Mech = NML.GetMechType( self:GetSpawnType(), "nml_mechtypes" )

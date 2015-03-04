@@ -7,25 +7,24 @@ local Addon = NML or {}
 
 local math = math
 local table = table
+local sound = sound
 local string = string
 
-local Helper         = Addon.Helper
+local Helper = Addon.Helper
 
-local lerp           = Helper.Lerp
-local sin            = Helper.Sin
-local cos            = Helper.Cos
-local acos           = Helper.Acos
-local atan           = Helper.Atan
-local bearing        = Helper.Bearing
+local lerp = Helper.Lerp
+local sin = Helper.Sin
+local cos = Helper.Cos
+local acos = Helper.Acos
+local atan = Helper.Atan
+local bearing = Helper.Bearing
 local clampAng = Helper.ClampAng
-local toLocalAxis    = Helper.ToLocalAxis
-local podEyeTrace    = Helper.PodEyeTrace
-local traceToVector  = Helper.TraceToVector
+local toLocalAxis = Helper.ToLocalAxis
+local podEyeTrace = Helper.PodEyeTrace
+local traceToVector = Helper.TraceToVector
 local traceDirection = Helper.TraceDirection
 
 ------------------------------------------------------
-
-local Mech = Addon.CreateMechType( "type_gtb22", "nml_mechtypes" )
 
 local schematic = {
     {
@@ -70,8 +69,13 @@ local schematic = {
     };
     {
         Parent   = 8,
-        Model    = "models/nml/lostplanet/gtb22/part_r_leg_d.mdl",
+        Model    = "models/nml/lostplanet/gtb22/part_foot.mdl",
         Position = Vector( 0, 0, -48.312 ),
+    };
+    {
+        Parent   = 9,
+        Model    = "models/nml/lostplanet/gtb22/part_toe.mdl",
+        Position = Vector( 15.485, 0, -9.386 ),
     };
     {
         Parent   = 1,
@@ -84,24 +88,29 @@ local schematic = {
         Position = Vector( -2.291, 9.182, -2.647 ),
     };
     {
-        Parent   = 11,
+        Parent   = 12,
         Model    = "models/nml/lostplanet/gtb22/part_l_leg_a.mdl",
         Position = Vector( 0, 22.183, 0 ),
     };
     {
-        Parent   = 12,
+        Parent   = 13,
         Model    = "models/nml/lostplanet/gtb22/part_l_leg_b.mdl",
         Position = Vector( -3.842, 0, -29.998 ),
     };
     {
-        Parent   = 13,
+        Parent   = 14,
         Model    = "models/nml/lostplanet/gtb22/part_l_leg_c.mdl",
         Position = Vector( 0, 0, -26.526 ),
     };
     {
-        Parent   = 14,
-        Model    = "models/nml/lostplanet/gtb22/part_l_leg_d.mdl",
+        Parent   = 15,
+        Model    = "models/nml/lostplanet/gtb22/part_foot.mdl",
         Position = Vector( 0, 0, -48.312 ),
+    };
+    {
+        Parent   = 16,
+        Model    = "models/nml/lostplanet/gtb22/part_toe.mdl",
+        Position = Vector( 15.485, 0, -9.386 ),
     };
     {
         Parent   = 3,
@@ -117,26 +126,54 @@ local schematic = {
 
 ------------------------------------------------------
 
+local function stepStartEvent( stepPos, pitchMod )
+    if LocalPlayer():GetShootPos():Distance( stepPos ) < 500 then
+        sound.Play( "nml/servo.wav", stepPos, 75, 65 + math.random( -5, 5 ) + pitchMod/15, 1 )
+    end
+end
+
+local function stepStopEvent( stepPos, pitchMod )
+    if LocalPlayer():GetShootPos():Distance( stepPos ) < 500 then
+        sound.Play( "npc/dog/dog_footstep_run" .. math.random( 1, 8 ) .. ".wav", stepPos, 75, 65 + math.random( -5, 5 ) + pitchMod/15, 1 )
+    end
+end
+
+------------------------------------------------------
+
+local Mech = Addon.CreateMechType( "type_gtb22", "nml_mechtypes" )
+
+Mech:AddSkin( 0, "Lost Planet ( White )" )
+Mech:AddSkin( 1, "Lost Planet ( Red )" )
+Mech:AddSkin( 2, "Combine Mech" )
+
+Mech.VelMul = 17
+Mech.Height = 300
+
+------------------------------------------------------
+
 Mech:SetInitialize( function( self, ent )
     self:LoadModelFromData( schematic )
     self:CreateGait( "L", Vector( -10, 25, 0 ), 29.998 + 26.526 + 48.312 + 100 )
     self:CreateGait( "R", Vector( -10, -25, 0 ), 29.998 + 26.526 + 48.312 + 100 )
 
-    self.Height = 300
+    self:SetGaitStepStartEvent( "L", stepStartEvent )
+    self:SetGaitStepStartEvent( "R", stepStartEvent )
+    --self:SetGaitStepStopEvent( "L", stepStopEvent )
+    --self:SetGaitStepStopEvent( "R", stepStopEvent )
+
     self.Crouch = 0
     self.Seed = CurTime() + math.random( -180, 180 )
-
-    self.VelMul = 15
-    self.PZ = 0
-    self.WalkDelta = 0
-    self.OldWalkCycle = 0
 
     self:AddGaitDebugBar( 64, 64, 96, 96*4 )
 end )
 
 ------------------------------------------------------
 
-local function legIK( ent, pos, hip, fem, tib, tars, foot, length0, length1, length2, factor )
+local function inrange( value, min, max )
+    return value >= min and value <= max
+end
+
+local function legIK( ent, pos, hip, fem, tib, tars, foot, toe, length0, length1, length2, factor )
     length0 = length0*factor
     length1 = length1*factor
     length2 = length2*factor
@@ -154,12 +191,13 @@ local function legIK( ent, pos, hip, fem, tib, tars, foot, length0, length1, len
 
     tib:SetAngles( fem:LocalToWorldAngles( Angle( atan( -laxis.z, laxis.x ) + acos( ( dist^2 + length1^2 - length2^2 )/( 2*length1*dist ) ) - 90, 0, 0 ) ) )
     tars:SetAngles( tib:LocalToWorldAngles( Angle( acos( ( length2^2 + length1^2 - dist^2 )/( 2*length1*length2 ) ) + 180, 0, 0 ) ) )
-
-    --local atn = laxisAngle.p
-    --local ang = ( math.abs( atn ) > 150 and math.abs( atn ) < 180 ) and 180 or ( atn < 0 ) and atn or 180
-    --foot:SetAngles( Angle( ang + 45, ent:GetAngles().y, 0 ) )
     foot:SetAngles( Angle( 0, ent:GetAngles().y, 0 ) )
+    --local atn = tars:GetAngles().p
+    --local ang = atn < 0 and 0 or atn
+    --foot:SetAngles( Angle( ang, ent:GetAngles().y, 0 ) )
+    --toe:SetAngles( Angle( 0, ent:GetAngles().y, 0 ) )
 end
+
 
 Mech:SetThink( function( self, ent, veh, ply, dt )
     if not self.CSHolobase then return end
@@ -177,6 +215,7 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
         d = ply:KeyDown( IN_MOVERIGHT ) and 1 or 0
 
         ctrl = ply:KeyDown( IN_DUCK ) and 1 or 0
+        shift = ply:KeyDown( IN_SPEED ) and 1 or 0
 
         aimPos = podEyeTrace( ply ).HitPos
     else
@@ -190,10 +229,8 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     self.WalkVel = lerp( self.WalkVel, vel:Length(), 0.1 )
     local multiplier = self.WalkVel/1000
 
-
-    self.WalkCycle = self.WalkCycle + ( 0.05 + 0.03*multiplier )*dt*self.VelMul
-    self.WalkDelta = self.WalkCycle - self.OldWalkCycle
-    self.OldWalkCycle = self.WalkCycle
+    self.AddVel = 3 - ctrl + shift*2
+    self.WalkCycle = self.WalkCycle + ( 0.05 + 0.03*multiplier )*dt*( self.VelMul - ctrl*5 + 5*shift )
 
     local gaitSize = math.Clamp( 0.4 + 0.03*multiplier, 0, 0.9 )
 
@@ -211,19 +248,14 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     self.Crouch = lerp( self.Crouch, ctrl*20, 0.15 )
 
     -- Pelvis
-    --local ppos = ent:GetPos()
-    --ppos.z = ( self.Gaits["R"].FootData.Pos.z + self.Gaits["L"].FootData.Pos.z )/2 + 90
-    --holo[1]:SetPos( ppos )
-
     local diff = self.Gaits["R"].FootData.Height - self.Gaits["L"].FootData.Height
-    --local diff = -sin( self.WalkCycle*360 )*25
 
-    holo[1]:SetPos( ent:LocalToWorld( Vector( 0, 0, math.abs( diff/2 ) - ctime - self.Crouch ) ) )
-    holo[1]:SetAngles( ent:LocalToWorldAngles( Angle( -stime + self.Crouch, 0, -diff/3*0 ) ) )
+    holo[1]:SetPos( ent:LocalToWorld( Vector( 0, 0, math.abs( diff ) - ctime - self.Crouch - 5 ) ) )
+    holo[1]:SetAngles( ent:LocalToWorldAngles( Angle( -stime + self.Crouch, 0, -diff/5 ) ) )
 
     -- Torso
     holo[4]:SetAngles( holo[1]:LocalToWorldAngles( Angle( 0, 0, -math.abs( diff/4 ) - ctime + 10 ) ) )
-    holo[10]:SetAngles( holo[1]:LocalToWorldAngles( Angle( 0, 0, math.abs( diff/4 ) + ctime - 10 ) ) )
+    holo[11]:SetAngles( holo[1]:LocalToWorldAngles( Angle( 0, 0, math.abs( diff/4 ) + ctime - 10 ) ) )
 
     -- Head
     local headCAng = holo[3]:GetAngles()
@@ -231,22 +263,22 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     headTAng:Normalize()
 
     local headTPitch = math.ApproachAngle( headCAng.p, headTAng.p, dt*75 )
-    local headTYaw = math.ApproachAngle( headCAng.y, headTAng.y, dt*75 )
+    local headTYaw = math.ApproachAngle( headCAng.y, headTAng.y, dt*100 )
 
     headTAng = holo[2]:WorldToLocalAngles( Angle( headTPitch, headTYaw, 0 ) )
     holo[3]:SetAngles( holo[2]:LocalToWorldAngles( clampAng( headTAng, Angle( -20, -180, -180 ), Angle( 25, 180, 180 ) ) ) )
 
     -- Weapons
-    local grenadeAngle = holo[3]:WorldToLocalAngles( ( ( aimPos or Vector() ) - holo[16]:LocalToWorld( Vector( 57.34, -16.446, -4.917 ) ) ):Angle() )
-    holo[16]:SetAngles( holo[3]:LocalToWorldAngles( Angle( math.Clamp( grenadeAngle.p, -45, 35 ), math.Clamp( grenadeAngle.y, -35, 15 ), 0 ) ) )
+    local grenadeAngle = holo[3]:WorldToLocalAngles( ( ( aimPos or Vector() ) - holo[18]:LocalToWorld( Vector( 57.34, -16.446, -4.917 ) ) ):Angle() )
+    holo[18]:SetAngles( holo[3]:LocalToWorldAngles( Angle( math.Clamp( grenadeAngle.p, -45, 35 ), math.Clamp( grenadeAngle.y, -35, 15 ), 0 ) ) )
 
-    local rocketAngle = holo[3]:WorldToLocalAngles( ( ( aimPos or Vector() ) - holo[17]:LocalToWorld( Vector( 39.264, 9.418, -2.055 ) ) ):Angle() )
-    holo[17]:SetAngles( holo[3]:LocalToWorldAngles( Angle( math.Clamp( rocketAngle.p, -45, 35 ), math.Clamp( rocketAngle.y, -15, 35 ), 0 ) ) )
+    local rocketAngle = holo[3]:WorldToLocalAngles( ( ( aimPos or Vector() ) - holo[19]:LocalToWorld( Vector( 39.264, 9.418, -2.055 ) ) ):Angle() )
+    holo[19]:SetAngles( holo[3]:LocalToWorldAngles( Angle( math.Clamp( rocketAngle.p, -45, 35 ), math.Clamp( rocketAngle.y, -15, 35 ), 0 ) ) )
 
     -- Legs
     local rFootPos = self.Gaits["R"].FootData.Pos + self.Gaits["R"].FootData.Trace.HitNormal*12
     local lFootPos = self.Gaits["L"].FootData.Pos + self.Gaits["L"].FootData.Trace.HitNormal*12
 
-    legIK( ent, rFootPos, holo[5], holo[6],  holo[7],  holo[8],  holo[9],  29.998, 26.526, 48.312, 1 )
-    legIK( ent, lFootPos, holo[11], holo[12], holo[13], holo[14], holo[15], 29.998, 26.526, 48.312, 1 )
+    legIK( ent, rFootPos, holo[5], holo[6],  holo[7],  holo[8],  holo[9], holo[10],  29.998, 26.526, 48.312, 1 )
+    legIK( ent, lFootPos, holo[12], holo[13], holo[14], holo[15], holo[16], holo[17], 29.998, 26.526, 48.312, 1 )
 end )

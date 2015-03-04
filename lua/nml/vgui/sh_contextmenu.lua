@@ -16,28 +16,28 @@ properties.Add( "nml_context_menu", {
         local mainMenu = option:AddSubMenu()
 
         local boneMenu = mainMenu:AddOption( "Show Bones", function()
-            --self:MenuSetShowBones( ent, not ent:GetShowBones() )
+            self:MenuSetToggleBones( ent, not ent:GetMechToggleBones() )
         end )
-        --boneMenu:SetChecked( ent:GetShowBones() )
+        boneMenu:SetChecked( ent:GetMechToggleBones() )
 
-        local shadingMenu = mainMenu:AddOption( "Disable Shading", function()
-            --self:MenuSetDisableShading( ent, not ent:GetDisableShading() )
+        local shadingMenu = mainMenu:AddOption( "Toggle Fullbright", function()
+            self:MenuSetToggleShading( ent, not ent:GetMechToggleShading() )
         end )
-        --shadingMenu:SetChecked( ent:GetDisableShading() )
+        shadingMenu:SetChecked( ent:GetMechToggleShading() )
 
         -- Change Skins
-        -- if #ent.Mech.Skins > 0 then
-        --     local skinMenu = mainMenu:AddSubMenu( "Change Skin" )
-        --     local skinCount = #ent.Mech.Skins
+        local skinCount = ent.Mech.SkinTable and #ent.Mech.SkinTable or 0
+        if skinCount > 0 then
+            local skinMenu = mainMenu:AddSubMenu( "Change Skin" )
 
-        --     for i = 0, skinCount do
-        --         local skin = skinMenu:AddOption( ent.Mech.Skins[i], function() self:MenuSetSkin( ent, i ) end )
-        --         if ent.Mech.Skin == i then skin:SetChecked( true ) end
-        --     end
-        -- end
+            for i = 0, skinCount do
+            local skin = skinMenu:AddOption( ent.Mech.SkinTable[i], function() self:MenuSetMechSkin( ent, i ) end )
+            if ent.Mech.Skin == i then skin:SetChecked( true ) end
+            end
+        end
     end,
 
-    MenuSetDisableShading = function( self, ent, status )
+    MenuSetToggleShading = function( self, ent, status )
         self:MsgStart()
             net.WriteString( "shading" )
             net.WriteUInt( ent:EntIndex(), 16 )
@@ -45,7 +45,7 @@ properties.Add( "nml_context_menu", {
         self:MsgEnd()
     end,
 
-    MenuSetShowBones = function( self, ent, status )
+    MenuSetToggleBones = function( self, ent, status )
         self:MsgStart()
             net.WriteString( "bones" )
             net.WriteUInt( ent:EntIndex(), 16 )
@@ -53,7 +53,7 @@ properties.Add( "nml_context_menu", {
         self:MsgEnd()
     end,
 
-    MenuSetSkin = function( self, ent, id )
+    MenuSetMechSkin = function( self, ent, id )
         self:MsgStart()
             net.WriteString( "skin" )
             net.WriteUInt( ent:EntIndex(), 16 )
@@ -70,17 +70,17 @@ properties.Add( "nml_context_menu", {
         if not self:Filter( ent, ply ) then return end
 
         if cmd == "skin" then
-            --ent:SetMechSkin( net.ReadUInt( 16 ) or 0 )
+            ent:SetMechSkin( net.ReadUInt( 16 ) or 0 )
             return
         end
 
         if cmd == "bones" then
-            --ent:SetShowBones( tobool( net.ReadBit() ) )
+            ent:SetMechToggleBones( tobool( net.ReadBit() ) )
             return
         end
 
         if cmd == "shading" then
-            --ent:SetDisableShading( tobool( net.ReadBit() ) )
+            ent:SetMechToggleShading( tobool( net.ReadBit() ) )
             return
         end
     end

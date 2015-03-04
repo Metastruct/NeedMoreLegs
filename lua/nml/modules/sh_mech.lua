@@ -151,7 +151,9 @@ function Mech:StartThink()
                 if phys:GetAngleVelocity():Length() > 500 then phys:AddAngleVelocity( -phys:GetAngleVelocity()/1.25 ) end
             end
         else
-
+            self:UpdateSkin()
+            self:UpdateShading()
+            self:UpdateBones()
         end
 
         self:Think( self.Entity, self.Entity:GetMechPilotSeat(), self.Entity:GetMechPilot(), FrameTime() )
@@ -195,6 +197,43 @@ end
 
 if not CLIENT then return end
 
+function Mech:AddSkin( id, name )
+    self.SkinTable[id] = name
+end
+
+function Mech:UpdateSkin()
+    if self.Skin ~= self.Entity:GetMechSkin() then
+        self.Skin = self.Entity:GetMechSkin()
+
+        if not self.CSHolograms then return end
+        for _, part in pairs( self.CSHolograms ) do
+            part:SetSkin( self.Skin )
+        end
+    end
+end
+
+function Mech:UpdateShading()
+    if self.Shading ~= self.Entity:GetMechToggleShading() then
+        self.Shading = self.Entity:GetMechToggleShading()
+
+        if not self.CSHolograms then return end
+        for _, part in pairs( self.CSHolograms ) do
+            part:SetFlagDisableShading( self.Shading )
+        end
+    end
+end
+
+function Mech:UpdateBones()
+    if self.Bones ~= self.Entity:GetMechToggleBones() then
+        self.Bones = self.Entity:GetMechToggleBones()
+
+        if not self.CSHolograms then return end
+        for _, part in pairs( self.CSHolograms ) do
+            part:SetFlagShowBone( self.Bones )
+        end
+    end
+end
+
 --- Loads a model from a table of values
 -- @function Mech:LoadModelFromData
 -- @tparam Table Data { Position=Vector(), Angle=Angle(), Model="String", Material="String" }
@@ -211,12 +250,16 @@ function Mech:LoadModelFromData( data )
         part:SetParent( partParent )
         part:SetPos( partParent:LocalToWorld( info.Position or Vector() ) )
         part:SetAngles( partParent:LocalToWorldAngles( info.Angle or Angle() ) )
-        part:SetModel( info.Model or "" )
+        part:SetModel( info.Model or part.Model )
         part:SetMaterial( info.Material or nil )
 
         -- Update
         part:UpdatePos()
         part:UpdateAngles()
+
+        part:SetSkin( self.Skin or 0 )
+        part:SetFlagDisableShading( self.Shading or false )
+        part:SetFlagShowBone( self.Bones or false )
 
         self.CSHolograms[i] = part
     end
@@ -256,9 +299,11 @@ end
 
 function Mech:SetGaitStart( id, start, len )
     if not self.Gaits or not self.Gaits[id] then return end
+    local start = start - math.floor( start )
     self.Gaits[id].Start = start
     self.Gaits[id].Stop = start + len
 end
+
 
 function Mech:RunGaitSequence()
     if not self.Gaits then return end
@@ -289,8 +334,8 @@ function Mech:RunGaitSequence()
         if Gait.FootData then
             local Foot = Gait.FootData
 
-            local vel = self.Entity:GetVelocity()/3
-            --vel.z = 0
+            local vel = self.Entity:GetVelocity()/( self.AddVel or 3 )
+                vel.z = 0
 
             local traceStart = self.Entity:LocalToWorld( Foot.Offset ) + vel
             local trace = util.TraceLine( {
@@ -331,6 +376,8 @@ function Mech:RunGaitSequence()
                         local thresh = Foot.LegLength + dot*100*math.Clamp( vel:Length()/100, 0, Foot.LegLength/2 )
                         if  dist <= thresh then
                             Foot.ShouldMove = true
+
+                            if Gait.StepStartEvent then Gait.StepStartEvent( Foot.Pos, vel:Length() ) end
                         end
                     end
                 end
@@ -353,7 +400,7 @@ function Mech:RunGaitSequence()
                     Foot.Pos = Foot.Dest
                     Foot.LastMove = false
 
-                    -- play sounds
+                    if Gait.StepStopEvent then Gait.StepStopEvent( Foot.Pos, Foot.Height ) end
                 end
                 Foot.ShouldMove = false
                 Foot.Height = 0
@@ -364,6 +411,20 @@ function Mech:RunGaitSequence()
     end
 
     if self.WalkCycle > 1 then self.WalkCycle = 0 end
+end
+
+function Mech:SetGaitStepStartEvent( name, cbk )
+    if not cbk then return end
+    if not self.Gaits then return end
+    if not self.Gaits[name] then return end
+    self.Gaits[name].StepStartEvent = cbk
+end
+
+function Mech:SetGaitStepStopEvent( name, cbk )
+    if not cbk then return end
+    if not self.Gaits then return end
+    if not self.Gaits[name] then return end
+    self.Gaits[name].StepStopEvent = cbk
 end
 
 --- Returns the difference between the height of two legs
@@ -414,8 +475,9 @@ Addon.DrawFilledRect = drawFilledRect
 -- @usage Mech:AddGaitDebugBar( 64, 64, 96, 96*4 )
 function Mech:AddGaitDebugBar( posx, posy, height, width )
     self:AddHudElement(
-        function()
+        function( ply )
             if not self.Gaits then return false end
+            if self.Entity:GetMechPilot() ~= ply then return false end
             return true
         end,
 
@@ -441,12 +503,26 @@ function Mech:AddGaitDebugBar( posx, posy, height, width )
                     local color = ( self.WalkCycle >= gaitStart or self.WalkCycle <= gaitStop ) and gdbg_colorA or gdbg_colorB
                     drawFilledRect( gpx, gpy, sx, sep, color, _ )
                     drawFilledRect( posx, gpy, width*gaitStop, sep, color, _ )
+
+                    local tx = posx + width*gaitStop - 1
+                    local ty = gpy - height*3 + sep*cnt
+                    local txt = "Start: " .. math.Round( gaitStart, 4 ) .. "\nStop: " ..  math.Round( gaitStop, 4 )
+
+                    draw.DrawText( txt, "Default", tx + 2, ty, gdbg_colorC, 0 )
+                    surface.DrawLine( tx, gpy, tx, ty )
                 else
                     local gpx = posx + width*gaitStart
                     local gpy = h - height - posy + sep*cnt
                     local sx = width*gaitStop - width*gaitStart
 
                     drawFilledRect( gpx, gpy, sx, sep, ( self.WalkCycle >= gaitStart and self.WalkCycle <= gaitStop ) and gdbg_colorA or gdbg_colorB, _ )
+
+                    local tx = gpx + sx + 2
+                    local ty = gpy - height*3 + sep*cnt
+                    local txt = "Start: " .. math.Round( gaitStart, 4 ) .. "\nStop: " ..  math.Round( gaitStop, 4 )
+
+                    draw.DrawText( txt, "Default", tx, ty, gdbg_colorC, 0 )
+                    surface.DrawLine( gpx + sx - 1, gpy, gpx + sx - 1, ty )
                 end
             end
 
