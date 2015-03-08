@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+    "$model" "1"
+    "$baseTexture" "nml/wh40k/defiler/defiler_legs_claws""
+    "$halflambert" "1"
+}

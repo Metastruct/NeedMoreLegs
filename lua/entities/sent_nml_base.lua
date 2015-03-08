@@ -23,6 +23,8 @@ function ENT:SetupDataTables()
     self:NetworkVar( "Bool", 0, "MechToggleBones" )
     self:NetworkVar( "Bool", 1, "MechToggleShading" )
     self:NetworkVar( "Int", 0, "MechSkin" )
+    self:NetworkVar( "String", 1, "MechMode" )
+    self:NetworkVar( "Float", 0, "MechJumpTime" )
 end
 
 ----------------------------------------------------------------------------------
@@ -73,6 +75,7 @@ function ENT:Initialize()
 
         self:SetMechPilotSeat( pod )
         self:SetMechSkin( 2 )
+        self:SetMechMode( "Normal" )
     end
 
     self.Mech = NML.GetMechType( self:GetSpawnType(), "nml_mechtypes" )
@@ -104,7 +107,7 @@ end
 ----------------------------------------------------------------------------------
 
 function ENT:Draw()
-    --self:DrawModel()
+    self:DrawModel()
 end
 
 ----------------------------------------------------------------------------------

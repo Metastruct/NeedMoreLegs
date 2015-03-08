@@ -88,11 +88,30 @@ function Mech:SetInitialize( setFunc )
 
         if SERVER then
             if not self.Physics then
-                self.Entity:PhysicsInit( SOLID_VPHYSICS )
                 self.Entity:SetMoveType( MOVETYPE_VPHYSICS )
                 self.Entity:SetSolid( SOLID_VPHYSICS )
+                self.Entity:PhysicsInit( SOLID_VPHYSICS )
             else
+                /*local cube = {
+                    Vector( 0, 0, 0 ),
+                    Vector( 0, 0, 1 ),
+                    Vector( 0, 1, 0 ),
+                    Vector( 0, 1, 1 ),
+                    Vector( 1, 0, 0 ),
+                    Vector( 1, 0, 1 ),
+                    Vector( 1, 1, 0 ),
+                    Vector( 1, 1, 1 ),
+                }
+                local mesh = {}
+                for _, vec in pairs( cube ) do
+                    mesh[_] = { pos = vec*100 }
+                end
+                self.Entity:PhysicsInitConvex( mesh )
+                self.Entity:EnableCustomCollisions( true )*/
+
                 local pboxmin, pboxmax, cboxmin, cboxmax = unpack( self.Physics )
+                self.Entity:SetMoveType( MOVETYPE_CUSTOM )
+                self.Entity:SetSolid( SOLID_CUSTOM )
                 self.Entity:PhysicsInitBox( pboxmin, pboxmax )
                 self.Entity:SetCollisionBounds( cboxmin or pboxmin, pboxmax or cboxmax )
             end
@@ -252,6 +271,7 @@ function Mech:LoadModelFromData( data )
         part:SetAngles( partParent:LocalToWorldAngles( info.Angle or Angle() ) )
         part:SetModel( info.Model or part.Model )
         part:SetMaterial( info.Material or nil )
+        part:SetScale( info.Scale or Vector( 1, 1, 1 ) )
 
         -- Update
         part:UpdatePos()
@@ -270,9 +290,12 @@ end
 --- Gait System - by Metamist
 -- @section
 
-local clampVec = Addon.Helper.ClampVec
-local bezierCurve = Addon.Helper.Bezier
-local traceDirection = Addon.Helper.TraceDirection
+local Helper = Addon.Helper
+
+local clampVec = Helper.ClampVec
+local bezierCurve = Helper.Bezier
+local traceDirection = Helper.TraceDirection
+local traceToVector = Helper.TraceToVector
 
 function Mech:CreateGait( id, footOffset, legLength )
     if not self.Gaits then
@@ -282,13 +305,14 @@ function Mech:CreateGait( id, footOffset, legLength )
         self.GaitCount = 0
     end
 
+    local pos = traceDirection( 500, self.Entity:LocalToWorld( footOffset or Vector() ), Vector( 0, 0, -1 ), nil, MASK_SOLID_BRUSHONLY ).HitPos
     self.Gaits[id] = {
         FootData = {
             Offset = footOffset or Vector(),
             LegLength = legLength or 0,
-            Prev = self.Entity:LocalToWorld( footOffset or Vector() ),
-            Dest = self.Entity:LocalToWorld( footOffset or Vector() ),
-            Pos = self.Entity:LocalToWorld( footOffset or Vector() ),
+            Prev = pos,
+            Dest = pos,
+            Pos = pos,
             IsMoving = false,
             ShouldMove = false,
             Height = 0,
@@ -307,6 +331,8 @@ end
 
 function Mech:RunGaitSequence()
     if not self.Gaits then return end
+
+    local filter = table.Add( { self.Entity, self.Entity:GetMechPilotSeat() }, player.GetAll() )
 
     for _, Gait in pairs( self.Gaits ) do
         local gstart = Gait.Start
@@ -335,24 +361,32 @@ function Mech:RunGaitSequence()
             local Foot = Gait.FootData
 
             local vel = self.Entity:GetVelocity()/( self.AddVel or 3 )
-                vel.z = 0
+                --vel.z = 0
 
-            local traceStart = self.Entity:LocalToWorld( Foot.Offset ) + vel
+            --local traceStart = self.Entity:LocalToWorld( Foot.Offset ) + vel
+
+
+/*
             local trace = util.TraceLine( {
-                start = traceStart,
-                endpos = traceStart + Vector( 0, 0, -1 )*Foot.LegLength*2,
-                filter = nil,
-                mask = MASK_SOLID_BRUSHONLY,
+                start = self.Entity:GetPos(),
+                endpos = self.Entity:LocalToWorld( Foot.Offset ) + vel,
+                filter = filter,
             } )
 
-            -- local trace = util.TraceHull( {
-            --     start = traceStart,
-            --     endpos = traceStart + Vector( 0, 0, -1 )*Foot.LegLength*2,
-            --     filter = nil,
-            --     mask = MASK_SOLID_BRUSHONLY,
-            --     mins = Vector( -15, -15, 0 ),
-            --     maxs = Vector( 15, 15, 0 ),
-            -- } )
+            if not trace.Hit then
+                trace = util.TraceLine( {
+                    start = trace.HitPos,
+                    endpos = trace.HitPos - self.Entity:GetUp()*Foot.LegLength*2, -- + Vector( 0, 0, -Foot.LegLength*2 ),
+                    filter = filter,
+                } )
+            end*/
+
+            local preTrace = traceToVector( self.Entity:GetPos(), self.Entity:LocalToWorld( Foot.Offset ), filter ).HitPos
+            local midTrace = traceToVector( preTrace, preTrace + vel, filter )
+            local endTrace = traceDirection( Foot.LegLength*2, midTrace.HitPos, -self.Entity:GetUp(), filter )
+
+            local trace = midTrace.Hit and midTrace or endTrace
+
 
             Foot.Trace = trace
 
@@ -361,17 +395,19 @@ function Mech:RunGaitSequence()
 
                 if not Foot.IsMoving then
                     Foot.Prev = Foot.Pos
-                    Foot.Prev.Z = trace.HitPos.z
+                    --Foot.Prev.Z = trace.HitPos.z
+                    --Foot.Prev = trace.HitPos
 
                     if Foot.Pos:Distance( trace.HitPos ) >= 4 then
                         local dot = 0
                         if trace.Hit then
-                            dot = 1 - Vector( 0, 0, 1 ):Dot( trace.HitNormal )
+                            --dot = 1 - Vector( 0, 0, 1 ):Dot( trace.HitNormal )
+                            dot = 1 - self.Entity:GetUp():Dot( trace.HitNormal )
                         end
 
                         local dist = trace.StartPos:Distance( trace.HitPos )
                         local vel = self.Entity:GetVelocity()
-                            vel.z = 0
+                            --vel.z = 0
 
                         local thresh = Foot.LegLength + dot*100*math.Clamp( vel:Length()/100, 0, Foot.LegLength/2 )
                         if  dist <= thresh then
@@ -385,12 +421,14 @@ function Mech:RunGaitSequence()
                 if Foot.ShouldMove then
                     local prev = Foot.Prev
                     local dest = trace.HitPos
-                    local mid = ( dest + prev )/2 + Vector( 0, 0, math.Clamp( prev:Distance( dest )/4, 0, self.Height ) )
+                    local mid = ( dest + prev )/2 + trace.HitNormal*math.Clamp( prev:Distance( dest )/4, 0, self.Height )
+                    --local mid = ( dest + prev )/2 + Vector( 0, 0, math.Clamp( prev:Distance( dest )/4, 0, self.Height ) )
 
                     local bezPos = bezierCurve( prev, mid, dest, gfract )
                     Foot.Pos = bezPos
 
                     Foot.Height = bezPos.z - dest.z
+                    --Foot.Height = bezPos:Distance( dest )
                     Foot.LastMove = true
                 else
                     Foot.Height = 0

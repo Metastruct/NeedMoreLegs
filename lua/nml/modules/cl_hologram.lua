@@ -33,6 +33,7 @@ local function bakeCookie( cookie, crumb )
     table.insert( cookieJar[cookie], crumb )
 end
 
+
 hook.Remove( "PostDrawOpaqueRenderables", "DemCookiesIsDone" )
 hook.Add( "PostDrawOpaqueRenderables", "DemCookiesIsDone", function( depth, sky )
     if not sky then return end
@@ -127,6 +128,7 @@ end
 function Hologram:SetPos( vec )
     self.Pos = vec
     self.FLAG_UPDATE_POS = true
+    self:UpdatePos()
 end
 
 --- Set the hologram's absolute world angles
@@ -136,6 +138,7 @@ end
 function Hologram:SetAngles( ang )
     self.Ang = ang
     self.FLAG_UPDATE_ANG = true
+    self:UpdateAngles()
 end
 
 --- Set Hologram properties
@@ -397,6 +400,10 @@ end
 --- Drawing ( handled internally )
 -- @section
 
+function Hologram:SetThink( func )
+    Hologram.Think = func
+end
+
 --- Updates the hologram's position in the draw hook ( handled by cookiejar, do not call this function )
 -- @function Hologram:UpdatePos
 function Hologram:UpdatePos()
@@ -471,6 +478,8 @@ function Hologram:Draw()
     render.SetBlend( 1 )
 
     self:DrawBones()
+
+    if self.Think then self.Think() end
 end
 
 --- Draws the hologram bones ( handled by cookiejar, do not call this function )
@@ -480,11 +489,16 @@ local boneColor = Color( 225, 225, 255, 225 )
 
 function Hologram:DrawBones()
     if not self.FLAG_SHOW_BONE then return end
-    if not self.Parent then return end
+    if not self.Parent and not self.Bone then return end
 
     cam.IgnoreZ( true )
         render.SetMaterial( boneMaterial )
-        render.DrawBeam( self.Pos, self.Parent:GetPos(), self.Pos:Distance( self.Parent:GetPos() )*0.2, 0, 1, boneColor )
+
+        if self.Bone then
+            render.DrawBeam( self.Pos, self.Bone:GetPos(), self.Pos:Distance( self.Bone:GetPos() )*0.2, 0, 1, boneColor )
+        else
+            render.DrawBeam( self.Pos, self.Parent:GetPos(), self.Pos:Distance( self.Parent:GetPos() )*0.2, 0, 1, boneColor )
+        end
     cam.IgnoreZ( false )
 end
 

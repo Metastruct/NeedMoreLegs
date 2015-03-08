@@ -28,6 +28,7 @@ end
 
 local function calcView( ply, origin, angles, fov )
     if not shouldEnable( ply ) then reset = true return end
+
     ply:GetVehicle():SetThirdPersonMode( false )
 
     local eyePos = ply:GetVehicle():LocalToWorld( Vector( 0, 0, 50 ) )

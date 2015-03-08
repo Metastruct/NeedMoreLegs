@@ -26,6 +26,7 @@ local toLocalAxis = Helper.ToLocalAxis
 local Mech = Addon.CreateMechType( "base_octopod", "nml_mechtypes" )
 
 Mech.Height = 50
+Mech.AddVel = 5
 
 local schematic = {
     -- Base
@@ -83,28 +84,6 @@ local ikf_length1 = 50
 local ik_length0 = 60
 local ik_length1 = 35
 
-Mech:SetInitialize( function( self, ent )
-    self:LoadModelFromData( schematic )
-
-    self:CreateGait( 1, Vector( 150, 80, 0 ), ( ikf_length0*2 + ikf_length1 )*2 )
-    self:CreateGait( 2, Vector( 150, -80, 0 ), ( ikf_length0*2 + ikf_length1 )*2 )
-    self:CreateGait( 3, Vector( 60, 100, 0 ), ( ik_length0*2 + ik_length1 )*2 )
-    self:CreateGait( 4, Vector( -20, 100, 0 ), ( ik_length0*2 + ik_length1 )*2 )
-    self:CreateGait( 5, Vector( 60, -100, 0 ), ( ik_length0*2 + ik_length1 )*2 )
-    self:CreateGait( 6, Vector( -20, -100, 0 ), ( ik_length0*2 + ik_length1 )*2 )
-    self:CreateGait( 7, Vector( -80, 80, 0 ), ( ik_length0*2 + ik_length1 )*2 )
-    self:CreateGait( 8, Vector( -80, -80, 0 ), ( ik_length0*2 + ik_length1 )*2 )
-
-    ent:SetMechToggleBones( true )
-
-    self.translateFB = 0
-    self.translateLR = 0
-
-    self:AddGaitDebugBar( 64, 64, 96, 96*4 )
-end )
-
-------------------------------------------------------
-
 --local function legIK( ent, pos, hip, fem, tib, tars, foot, toe, length0, length1, length2, factor )
 local function legIK( ent, pos, fem, tib, tars, length0, length1 )
     local laxis = toLocalAxis( ent, pos - fem:GetPos() )
@@ -119,9 +98,27 @@ local function legIK( ent, pos, fem, tib, tars, length0, length1 )
 end
 
 
+Mech:SetInitialize( function( self, ent )
+    self:LoadModelFromData( schematic )
+
+    self:CreateGait( 1, Vector( 150, 80, 0 ), ( ikf_length0*2 + ikf_length1 )*2 )
+    self:CreateGait( 2, Vector( 150, -80, 0 ), ( ikf_length0*2 + ikf_length1 )*2 )
+    self:CreateGait( 3, Vector( 60, 100, 0 ), ( ik_length0*2 + ik_length1 )*2 )
+    self:CreateGait( 4, Vector( -20, 100, 0 ), ( ik_length0*2 + ik_length1 )*2 )
+    self:CreateGait( 5, Vector( 60, -100, 0 ), ( ik_length0*2 + ik_length1 )*2 )
+    self:CreateGait( 6, Vector( -20, -100, 0 ), ( ik_length0*2 + ik_length1 )*2 )
+    self:CreateGait( 7, Vector( -80, 80, 0 ), ( ik_length0*2 + ik_length1 )*2 )
+    self:CreateGait( 8, Vector( -80, -80, 0 ), ( ik_length0*2 + ik_length1 )*2 )
+
+
+end )
+
+------------------------------------------------------
+
 Mech:SetThink( function( self, ent, veh, ply, dt )
     if not self.CSHolobase then return end
     if not self.CSHolograms then return end
+    --if true then return false end
 
     -- Setup Inputs
     local aimPos = Vector()
@@ -165,12 +162,6 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     -- Animate legs
     local holo = self.CSHolograms
 
-    self.translateFB = lerp( self.translateFB, alt*( w - s ), 0.1 )
-    self.translateLR = lerp( self.translateLR, alt*( d - a ), 0.1 )
-
-    holo[1]:SetPos( ent:LocalToWorld( Vector( self.translateFB*30, self.translateLR*-30, 0 ) ) )
-    holo[1]:SetAngles( ent:LocalToWorldAngles( Angle( self.translateFB*-30, 0, self.translateLR*-30 ) ) )
-
     legIK( ent, self.Gaits[1].FootData.Pos, holo[2], holo[3], holo[4], 75, 50 )
     legIK( ent, self.Gaits[2].FootData.Pos, holo[5], holo[6], holo[7], 75, 50 )
     legIK( ent, self.Gaits[3].FootData.Pos, holo[8], holo[9], holo[10], 60, 35 )
@@ -179,4 +170,6 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     legIK( ent, self.Gaits[6].FootData.Pos, holo[17], holo[18], holo[19], 60, 35 )
     legIK( ent, self.Gaits[7].FootData.Pos, holo[20], holo[21], holo[22], 60, 35 )
     legIK( ent, self.Gaits[8].FootData.Pos, holo[23], holo[24], holo[25], 60, 35 )
+
 end )
+

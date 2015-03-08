@@ -13,6 +13,8 @@ local string = string
 
 local Mech = Addon.CreateMechType( "base_biped", "nml_mechtypes" )
 
+Mech:SetPhysicsBox( Vector( -200, -200, 0), Vector( 200, 200, 200 ) )
+
 ------------------------------------------------------
 
 Mech:SetInitialize( function( self )

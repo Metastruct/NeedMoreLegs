@@ -1,0 +1,1 @@
+ldoc.lua.bat lua -p NeedMoreLegs -t "NeedMoreLegs Reference" -f plain -X

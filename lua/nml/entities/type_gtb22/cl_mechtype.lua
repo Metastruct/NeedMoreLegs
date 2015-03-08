@@ -162,9 +162,10 @@ Mech:SetInitialize( function( self, ent )
     --self:SetGaitStepStopEvent( "R", stepStopEvent )
 
     self.Crouch = 0
+    self.HeightDiff = 0
     self.Seed = CurTime() + math.random( -180, 180 )
 
-    self:AddGaitDebugBar( 64, 64, 96, 96*4 )
+    -- self:AddGaitDebugBar( 64, 64, 96, 96*4 )
 end )
 
 ------------------------------------------------------
@@ -198,6 +199,9 @@ local function legIK( ent, pos, hip, fem, tib, tars, foot, toe, length0, length1
     --toe:SetAngles( Angle( 0, ent:GetAngles().y, 0 ) )
 end
 
+local function lerpAngle( a0, a1, t )
+    return Angle( lerp( a1.p, a0.p, t ), lerp( a1.y, a0.y, t ), lerp( a1.r, a0.r, t ) )
+end
 
 Mech:SetThink( function( self, ent, veh, ply, dt )
     if not self.CSHolobase then return end
@@ -241,7 +245,7 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     -- Animate holograms
     local holo = self.CSHolograms
 
-    local time = CurTime() + self.Seed
+    local time = UnPredictedCurTime() -- CurTime() + self.Seed
     local stime = sin( time*100 )*2
     local ctime = cos( time*100 )*2
 
@@ -250,8 +254,11 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     -- Pelvis
     local diff = self.Gaits["R"].FootData.Height - self.Gaits["L"].FootData.Height
 
-    holo[1]:SetPos( ent:LocalToWorld( Vector( 0, 0, math.abs( diff ) - ctime - self.Crouch - 5 ) ) )
-    holo[1]:SetAngles( ent:LocalToWorldAngles( Angle( -stime + self.Crouch, 0, -diff/5 ) ) )
+    local diffH = 100 - ( ( self.Gaits["R"].FootData.Pos + self.Gaits["L"].FootData.Pos )/2 ):Distance( ent:GetPos() )
+    self.HeightDiff = lerp( self.HeightDiff, diffH, 30*dt )
+
+    holo[1]:SetPos( ent:LocalToWorld( Vector( 0, 0, self.HeightDiff - stime ) ) )
+    holo[1]:SetAngles( LerpAngle( 10*dt, holo[1]:GetAngles(), ent:LocalToWorldAngles( Angle( 0 + self.Crouch, 0, -diff/5 ) ) ) )
 
     -- Torso
     holo[4]:SetAngles( holo[1]:LocalToWorldAngles( Angle( 0, 0, -math.abs( diff/4 ) - ctime + 10 ) ) )
