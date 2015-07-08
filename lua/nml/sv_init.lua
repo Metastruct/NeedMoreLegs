@@ -1,6 +1,6 @@
 
 -- Add Client Libraries and Modules
-AddCSLuaFile( "vgui/cl_spawnmenu.lua" )
+--AddCSLuaFile( "vgui/cl_spawnmenu.lua" )
 AddCSLuaFile( "vgui/sh_contextmenu.lua" )
 
 AddCSLuaFile( "libraries/sh_plshalp.lua" )

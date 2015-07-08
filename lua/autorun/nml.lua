@@ -26,3 +26,26 @@ else
     include( "nml/cl_init.lua" )
 
 end
+
+
+local mechs = list.Get( "nml_mechtypes" )
+for mechname,data in next, mechs or {} do
+	
+
+
+	list.Set( "SpawnableEntities", mechname, {
+			PrintName               = mechname,
+			ClassName               = "sent_nml_base",
+			Category                = "NeedMoreLegs",
+			KeyValues 				= {
+										mechtype = mechname
+									}
+			-- Optional information
+			--NormalOffset    = t.NormalOffset,
+			--DropToFloor             = true,
+			Author                  = "NML",
+			AdminOnly               = true,
+			Information             = "test"
+	} )
+
+end

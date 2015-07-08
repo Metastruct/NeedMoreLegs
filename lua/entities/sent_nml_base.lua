@@ -9,7 +9,7 @@ ENT.Type = "anim"
 ENT.Author = "shadowscion"
 ENT.PrintName = "base_nml"
 
-ENT.Spawnable = true
+ENT.Spawnable = false
 ENT.AdminSpawnable = true
 
 ----------------------------------------------------------------------------------
@@ -98,6 +98,22 @@ end
 
 ----------------------------------------------------------------------------------
 
+function ENT:KeyValue(k,v)
+    if k=="mechtype" then
+		local types = list.Get "nml_mechtypes" 
+		
+		local type = v
+		if not types[type] then
+			local _,fallbacktype = next(( list.Get "nml_mechtypes" ))
+			type = fallbacktype
+		end
+
+		self:SetSpawnType( type )
+	end
+end
+
+----------------------------------------------------------------------------------
+
 function ENT:Use( ply )
     if not IsValid( self:GetMechPilotSeat() ) then return end
     if IsValid( self:GetMechPilot() ) then return end
@@ -111,3 +127,4 @@ function ENT:Draw()
 end
 
 ----------------------------------------------------------------------------------
+
