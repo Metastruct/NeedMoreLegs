@@ -39,7 +39,7 @@ for mechname,data in next, mechs or {} do
 			Category                = "NeedMoreLegs",
 			KeyValues 				= {
 										mechtype = mechname
-									}
+									},
 			-- Optional information
 			--NormalOffset    = t.NormalOffset,
 			--DropToFloor             = true,
