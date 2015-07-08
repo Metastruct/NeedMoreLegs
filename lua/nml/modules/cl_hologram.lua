@@ -26,7 +26,6 @@ local function bakeCookie( cookie, crumb )
                 crumb = nil
             end
             cookieJar[self] = nil
-            collectgarbage( "collect" )
         end )
     end
 
@@ -34,7 +33,7 @@ local function bakeCookie( cookie, crumb )
 end
 
 
-hook.Remove( "PostDrawOpaqueRenderables", "DemCookiesIsDone" )
+
 hook.Add( "PostDrawOpaqueRenderables", "DemCookiesIsDone", function( depth, sky )
     if not sky then return end
     for _, cookie in pairs( cookieJar ) do
@@ -171,7 +170,7 @@ end
 -- @tparam String Model Must be a valid model
 -- @usage Hologram:SetModel( "models/error.mdl" )
 function Hologram:SetModel( model )
-    if not file.Exists( model, "GAME" ) then self.Model = "models/error.mdl" return end
+    --if not file.Exists( model, "GAME" ) then self.Model = "models/error.mdl" return end
     self.Model = model
 end
 
@@ -180,7 +179,7 @@ end
 -- @tparam String Material Must be a valid material
 -- @usage Hologram:SetMaterial( "models/debug/debugwhite" )
 function Hologram:SetMaterial( material )
-    if not file.Exists( string.format( "materials/%s.vmt", material ), "GAME" ) then self.Material = nil return end
+    --if not file.Exists( string.format( "materials/%s.vmt", material ), "GAME" ) then self.Material = nil return end
     self.Material = material
 end
 
