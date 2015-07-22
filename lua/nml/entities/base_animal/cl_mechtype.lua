@@ -238,7 +238,7 @@ Mech:SetInitialize( function( self, ent )
 
     ent.Draw = function() end
 
-    self:AddGaitDebugBar( 64, 64, 96*1.25, 96*4*1.25 )
+    --self:AddGaitDebugBar( 64, 64, 96*1.25, 96*4*1.25 )
 
     self.val1 = 0
     self.val2 = 0
