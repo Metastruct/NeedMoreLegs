@@ -83,7 +83,8 @@ function ENT:Initialize()
     if not self.Mech.Initialize then self:Remove() return end
 
     timer.Simple( 0, function()
-        self.Mech:SetEntity( self )
+        if not self:IsValid() or not self.Mech then return end
+		self.Mech:SetEntity( self )
         self.Mech:Initialize()
     end )
 end

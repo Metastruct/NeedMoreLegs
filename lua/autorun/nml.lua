@@ -31,21 +31,20 @@ end
 local mechs = list.Get( "nml_mechtypes" )
 for mechname,data in next, mechs or {} do
 	
-
+	local PrintName = mechname
+	PrintName = PrintName:gsub("^base_","")
 
 	list.Set( "SpawnableEntities", mechname, {
-			PrintName               = mechname,
+			
+			PrintName               = PrintName,
 			ClassName               = "sent_nml_base",
 			Category                = "NeedMoreLegs",
 			KeyValues 				= {
 										mechtype = mechname
 									},
-			-- Optional information
-			--NormalOffset    = t.NormalOffset,
-			--DropToFloor             = true,
 			Author                  = "NML",
 			AdminOnly               = true,
-			Information             = "test"
+			Information             = "A NeedMoreLegs mech"
 	} )
 
 end
