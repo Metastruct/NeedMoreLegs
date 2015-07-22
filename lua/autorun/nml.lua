@@ -43,7 +43,7 @@ for mechname,data in next, mechs or {} do
 										mechtype = mechname
 									},
 			Author                  = "NML",
-			AdminOnly               = true,
+			AdminOnly               = false,
 			Information             = "A NeedMoreLegs mech"
 	} )
 
