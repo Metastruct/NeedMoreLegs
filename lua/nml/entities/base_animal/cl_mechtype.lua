@@ -205,7 +205,7 @@ function Mech:RunLinks( roll )
     local count = #self.Links
     for _, link in ipairs( self.Links ) do
         link.Holo:SetPos( link.Parent:LocalToWorld( link.Offset ) )
-        if _ < count then
+        if _ < count and link.Ahead then
             link.Holo:SetAngles( ( link.Parent:GetPos() - link.Ahead:GetPos() ):Angle() )
         end
     end
@@ -294,7 +294,8 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
 
     -- Setup Inputs
     local holo = self.CSHolograms
-
+	
+	
     local aimPos = Vector()
     local w, a, s, d = 0, 0, 0, 0
     local ctrl, alt, space, shift = 0, 0, 0, 0
@@ -338,6 +339,8 @@ Mech:SetThink( function( self, ent, veh, ply, dt )
     self:SetGaitStart( "RR", lerp( 0.25, 0.6125, self.val1 ), gaitSize )
     self:RunGaitSequence()
 
+	if not holo then return end
+	
     if shift == 1 then
 
 
