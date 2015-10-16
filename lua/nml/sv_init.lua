@@ -20,5 +20,4 @@ NML.NavigateFolders( "nml/entities", "lua", "LUA", function( dir, file )
     local type = string.sub( file, 1, 2 )
     if type == "sv" or type == "sh" then include( dir .. "/" .. file ) end
     if type == "cl" or type == "sh" then AddCSLuaFile( dir .. "/" .. file ) end
-    print( dir .. "/" .. file )
 end )
