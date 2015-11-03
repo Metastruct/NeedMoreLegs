@@ -35,7 +35,7 @@ end
 
 
 hook.Add( "PostDrawOpaqueRenderables", "DemCookiesIsDone", function( depth, sky )
-    if not sky then return end
+    if sky then return end
     for _, cookie in pairs( cookieJar ) do
         if not _.draw then continue end
         for _, crumb in pairs( cookie ) do
