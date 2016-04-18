@@ -17,7 +17,7 @@ local reset = true
 ----------------------------------------------------------------------------------
 
 local function shouldEnable( ply )
-    if not ply:InVehicle() or not IsValid( ply:GetVehicle():GetParent() ) then return false end
+    if not ply:InVehicle() or not ply:GetVehicle():GetParent():IsValid() then return false end
     if ply:GetVehicle():GetParent():GetClass() ~= "sent_nml_base" then return false end
     if not ply:Alive() or ply:GetViewEntity() ~= ply then return false end
 
@@ -55,22 +55,19 @@ local function calcView( ply, origin, angles, fov )
     return view
 end
 
-hook.Remove( "CalcView", "NML.CalcView" )
-hook.Add( "CalcView", "NML.CalcView", calcView )
+hook.Add( "CalcView", "NML", calcView )
 
 ----------------------------------------------------------------------------------
 
-local function drawPlayer( ply )
-     if not shouldEnable( ply ) then return end
-     return true
+local function ShouldDrawLocalPlayer( ply )
+     if shouldEnable( ply ) then return true end
 end
 
-hook.Remove( "ShouldDrawLocalPlayer", "NML.ShouldDrawLocalPlayer" )
-hook.Add( "ShouldDrawLocalPlayer", "NML.ShouldDrawLocalPlayer", drawPlayer )
+hook.Add( "ShouldDrawLocalPlayer", "NML", ShouldDrawLocalPlayer )
 
 ----------------------------------------------------------------------------------
 
-local function doZoom( ply, bind, pressed )
+local function PlayerBindPress( ply, bind, pressed )
     if not shouldEnable( ply ) then return end
 
     local key = input.LookupBinding( bind )
@@ -80,7 +77,6 @@ local function doZoom( ply, bind, pressed )
     if key == "MWHEELUP" then zoom = math.Clamp( zoom + 50, 150, 1000 ) end
 end
 
-hook.Remove( "PlayerBindPress", "NML.PlayerBindPress" )
-hook.Add( "PlayerBindPress", "NML.PlayerBindPress", doZoom )
+hook.Add( "PlayerBindPress", "NML", PlayerBindPress )
 
 ----------------------------------------------------------------------------------

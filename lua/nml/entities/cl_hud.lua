@@ -14,8 +14,10 @@ local HUD = Addon.HUD
 
 ----------------------------------------------------------------------------------
 
-local function drawHUD()
-    local ply, h, w = LocalPlayer(), ScrH(), ScrW()
+local ply
+local function HUDPaint(w,h)
+  
+	ply, h, w = ply or LocalPlayer(), ScrH(), ScrW()
     for _, screen in pairs( HUD ) do
         for _, element in pairs( screen ) do
             if not element.cnd or not element.cbk then element = nil screen = nil continue end
@@ -25,22 +27,22 @@ local function drawHUD()
     end
 end
 
-hook.Remove( "HUDPaint", "NML.HUDPaint" )
-hook.Add( "HUDPaint", "NML.HUDPaint", drawHUD )
+hook.Add( "HUDPaint", "NML", HUDPaint )
 
 ----------------------------------------------------------------------------------
 
-local function hideHUD( name )
-    local ply = LocalPlayer()
+local function HUDShouldDraw( name )
 
-    if not IsValid( ply ) or not ply:Alive() then return end
-    if not ply:InVehicle() or not IsValid( ply:GetVehicle():GetParent() ) then return end
+    if name ~= "CHudHealth" and name ~= "CHudBattery" then return end
+	ply = ply or LocalPlayer()
+    if not ply or not ply:InVehicle() or not ply:Alive() then return end
+    if not ply:GetVehicle():GetParent():IsValid() then return end
     if ply:GetVehicle():GetParent():GetClass() ~= "sent_nml_base" then return end
-
-    if name == "CHudHealth" or name == "CHudBattery" then return false end
+	
+	return false
+	
 end
 
-hook.Remove( "HUDShouldDraw", "NML.HUDShouldDraw" )
-hook.Add( "HUDShouldDraw", "NML.HUDShouldDraw", hideHUD )
+hook.Add( "HUDShouldDraw", "NML", HUDShouldDraw )
 
 ----------------------------------------------------------------------------------
