@@ -412,7 +412,7 @@ function Hologram:UpdatePos()
         self.FLAG_UPDATE_POS = false
         return
     end
-    if self.Parent then self.Pos = self.Parent:LocalToWorld( self.LPos ) end
+    if IsValid(self.Parent) then self.Pos = self.Parent:LocalToWorld( self.LPos ) end
     self.CSEnt:SetRenderOrigin( self.Pos )
 end
 
