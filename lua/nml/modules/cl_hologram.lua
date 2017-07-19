@@ -407,7 +407,7 @@ end
 -- @function Hologram:UpdatePos
 function Hologram:UpdatePos()
     if self.FLAG_UPDATE_POS then
-        if self.Parent then self.LPos = self.Parent:WorldToLocal( self.Pos ) end
+        if IsValid(self.Parent) then self.LPos = self.Parent:WorldToLocal( self.Pos ) end
         self.CSEnt:SetRenderOrigin( self.Pos )
         self.FLAG_UPDATE_POS = false
         return
@@ -420,12 +420,12 @@ end
 -- @function Hologram:UpdateAngles
 function Hologram:UpdateAngles()
     if self.FLAG_UPDATE_ANG then
-        if self.Parent then self.LAng = self.Parent:WorldToLocalAngles( self.Ang ) end
+        if IsValid(self.Parent) then self.LAng = self.Parent:WorldToLocalAngles( self.Ang ) end
         self.CSEnt:SetRenderAngles( self.Ang )
         self.FLAG_UPDATE_ANG = false
         return
     end
-    if self.Parent then self.Ang = self.Parent:LocalToWorldAngles( self.LAng ) end
+    if IsValid(self.Parent) then self.Ang = self.Parent:LocalToWorldAngles( self.LAng ) end
     self.CSEnt:SetRenderAngles( self.Ang )
 end
 
@@ -488,7 +488,7 @@ local boneColor = Color( 225, 225, 255, 225 )
 
 function Hologram:DrawBones()
     if not self.FLAG_SHOW_BONE then return end
-    if not self.Parent and not self.Bone then return end
+    if not IsValid(self.Parent) and not IsValid(self.Bone) then return end
 
     cam.IgnoreZ( true )
         render.SetMaterial( boneMaterial )
